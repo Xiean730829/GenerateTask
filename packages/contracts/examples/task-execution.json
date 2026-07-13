@@ -8,6 +8,13 @@
   "traceId": "trace-ms1-script-001",
   "createdAt": "2026-07-12T12:00:00Z",
   "payload": {
+    "sourceText": "失忆将军在雨夜发现敌军密信。",
+    "projectConfig": {
+      "projectType": "single_episode",
+      "targetDurationSeconds": 60,
+      "aspectRatio": "9:16",
+      "style": "古风悬疑"
+    },
     "sourceMaterialId": "55555555-5555-4555-8555-555555555555"
   }
 }

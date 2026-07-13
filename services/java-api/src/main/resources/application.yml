@@ -7,7 +7,7 @@ spring:
 
   # PostgreSQL：数据库名/账号/端口遵循 Issue #10 开发规范
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/auto_drama}
+    url: ${DB_URL:jdbc:postgresql://localhost:55432/auto_drama}
     username: ${DB_USERNAME:auto_drama}
     password: ${DB_PASSWORD:auto_drama_dev}
     driver-class-name: org.postgresql.Driver
@@ -50,8 +50,9 @@ management:
     health:
       probes:
         enabled: true
-      # 开发阶段展示各依赖组件明细，便于排查连通性；生产环境应收紧
-      show-details: always
+      # 默认不向未认证调用方暴露依赖版本、连接与磁盘信息。
+      # 本地排障时可用 MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS=always 临时覆盖。
+      show-details: never
   health:
     db:
       enabled: true

@@ -29,13 +29,15 @@ tags:
   - name: scripts
     description: Script generation and read. (#6 §5)
   - name: shots
-    description: Shot generation and read. (#6 §6)
+    description: Shot generation, read and user-visible Prompt revisions. (#6 §6)
+  - name: keyframes
+    description: Shot keyframe generation, candidate selection and read. (MS1 media flow)
   - name: assets
     description: Simplified asset library. (#6 §7)
   - name: panels
     description: Panel aggregation. (#6 §8)
   - name: videos
-    description: Shot video generation. (#6 §10)
+    description: PanelRevision video generation. (#6 §10)
   - name: audio-subtitle
     description: Voiceover and subtitle generation. (#6 §11)
   - name: timeline
@@ -150,6 +152,69 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/projects/{projectId}/materials:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [materials]
+      operationId: listProjectMaterials
+      summary: List a project's SourceMaterials
+      responses:
+        '200':
+          description: Source materials belonging to the project.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/SourceMaterial' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/materials/{materialId}:
+    parameters:
+      - $ref: '#/components/parameters/MaterialId'
+    get:
+      tags: [materials]
+      operationId: getMaterial
+      summary: Get a SourceMaterial
+      responses:
+        '200':
+          description: Source material.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/SourceMaterial' } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [materials]
+      operationId: updateMaterial
+      summary: Update a text SourceMaterial
+      description: Updating material marks the dependent Script and its downstream production results stale.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateSourceMaterialRequest' }
+      responses:
+        '200':
+          description: Updated source material.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/SourceMaterial' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   # ---------------------------------------------------------------- episodes
   /api/projects/{projectId}/episodes:
     parameters:
@@ -175,6 +240,45 @@ paths:
                           $ref: '#/components/schemas/Episode'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /api/episodes/{episodeId}:
+    parameters:
+      - $ref: '#/components/parameters/EpisodeId'
+    get:
+      tags: [episodes]
+      operationId: getEpisode
+      summary: Get Episode workspace context
+      responses:
+        '200':
+          description: Episode detail.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/Episode' } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/episodes/{episodeId}/video-capability:
+    parameters:
+      - $ref: '#/components/parameters/EpisodeId'
+    get:
+      tags: [episodes]
+      operationId: getEpisodeVideoCapability
+      summary: Get server-selected video duration capability
+      description: The client uses this read-only capability to request Panel assembly; it must not hard-code model duration limits.
+      responses:
+        '200':
+          description: Current video capability and Panel duration constraints.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/VideoCapability' } }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   # ----------------------------------------------------------------- scripts
   /api/episodes/{episodeId}/script-tasks:
@@ -223,6 +327,60 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/scripts/{scriptId}:
+    parameters:
+      - $ref: '#/components/parameters/ScriptId'
+    get:
+      tags: [scripts]
+      operationId: getScript
+      summary: Get a script by identifier
+      responses:
+        '200':
+          description: Script detail.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/Script' } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [scripts]
+      operationId: updateScript
+      summary: Update the current script
+      description: Updating the script marks its Shots and all downstream production results stale.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateScriptRequest' }
+      responses:
+        '200':
+          description: Updated script.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/Script' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/scripts/{scriptId}/confirm:
+    parameters:
+      - $ref: '#/components/parameters/ScriptId'
+    post:
+      tags: [scripts]
+      operationId: confirmScriptAndGenerateShots
+      summary: Confirm a script and start shot generation
+      description: Confirms the current Script and queues its shot.generate GenerationTask.
+      responses:
+        '202': { $ref: '#/components/responses/TaskAccepted' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
   # ------------------------------------------------------------------- shots
   /api/scripts/{scriptId}/shot-tasks:
     parameters:
@@ -270,6 +428,233 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/shots/{shotId}:
+    parameters:
+      - $ref: '#/components/parameters/ShotId'
+    get:
+      tags: [shots]
+      operationId: getShot
+      summary: Get a Shot
+      responses:
+        '200':
+          description: Shot detail with its current prompt pointer.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/Shot' } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [shots]
+      operationId: updateShot
+      summary: Update structural Shot fields
+      description: >-
+        Updates the Shot's non-Prompt fields. Prompt text is changed only through
+        POST /api/shots/{shotId}/prompt-revisions so that prompt provenance remains immutable.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateShotRequest' }
+      responses:
+        '200':
+          description: Updated Shot; dependent media is marked stale when applicable.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/Shot' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/shots/{shotId}/asset-overrides:
+    parameters:
+      - $ref: '#/components/parameters/ShotId'
+    get:
+      tags: [shots]
+      operationId: listShotAssetOverrides
+      summary: List a Shot's asset overrides
+      responses:
+        '200':
+          description: Asset overrides local to this Shot.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/ShotAssetOverride' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [shots]
+      operationId: createShotAssetOverride
+      summary: Create or replace a local asset override
+      description: Only this Shot and its dependent media become stale; the shared Asset is not changed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateShotAssetOverrideRequest' }
+      responses:
+        '201':
+          description: Immutable shot-local override.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/ShotAssetOverride' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/shots/{shotId}/keyframe-tasks:
+    parameters:
+      - $ref: '#/components/parameters/ShotId'
+    post:
+      tags: [keyframes]
+      operationId: createShotKeyframeTask
+      summary: Start a keyframe generation task for one Shot
+      description: >-
+        Queues keyframe.generate from the Shot's current PromptRevision and resolved
+        AssetRevision/ShotAssetOverride context. It never consumes mutable Asset state directly.
+      responses:
+        '202': { $ref: '#/components/responses/TaskAccepted' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/episodes/{episodeId}/keyframe-tasks/batch:
+    parameters:
+      - $ref: '#/components/parameters/EpisodeId'
+    post:
+      tags: [keyframes]
+      operationId: createEpisodeKeyframeTasks
+      summary: Start keyframe generation tasks for up to nine selected Shots
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/KeyframeBatchRequest' }
+      responses:
+        '202':
+          description: One task per selected Shot was queued.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/GenerationTask' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/episodes/{episodeId}/keyframes:
+    parameters:
+      - $ref: '#/components/parameters/EpisodeId'
+    get:
+      tags: [keyframes]
+      operationId: listEpisodeKeyframes
+      summary: List an Episode's keyframe candidates
+      responses:
+        '200':
+          description: Keyframe candidates grouped by Shot by the client.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Keyframe' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/keyframes/{keyframeId}/select:
+    parameters:
+      - $ref: '#/components/parameters/KeyframeId'
+    post:
+      tags: [keyframes]
+      operationId: selectKeyframe
+      summary: Select a keyframe candidate for its Shot
+      description: Selecting a candidate updates subsequent PanelRevision assembly input only; it does not mutate past revisions.
+      responses:
+        '200':
+          description: Selected keyframe.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/Keyframe' } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/shots/{shotId}/prompt-revisions:
+    parameters:
+      - $ref: '#/components/parameters/ShotId'
+    get:
+      tags: [shots]
+      operationId: listShotPromptRevisions
+      summary: List a shot's Prompt revision history
+      responses:
+        '200':
+          description: Immutable Prompt revisions in descending revision order.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ShotPromptRevision'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [shots]
+      operationId: createShotPromptRevision
+      summary: Create a user-visible Prompt revision
+      description: >-
+        Manual editing creates a new immutable ShotPromptRevision and marks only
+        this Shot's dependent keyframes, PanelRevisions and PanelVideos stale.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShotPromptRevisionRequest'
+      responses:
+        '201':
+          description: Prompt revision created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ShotPromptRevision'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   # ------------------------------------------------------------------ assets
   /api/projects/{projectId}/asset-extract-tasks:
     parameters:
@@ -279,8 +664,9 @@ paths:
       operationId: createAssetExtractTask
       summary: Start an asset extraction task (#6 §18.9)
       description: >-
-        Creates an asset.extract GenerationTask that derives character/scene/style/voice
-        asset needs from the episode's shots. episodeId is required in MS1: every task must
+        Creates an asset.extract GenerationTask that derives character/scene/style
+        asset needs from the episode's shots. Character voice settings are attributes of
+        character Assets, not independent Assets. episodeId is required in MS1: every task must
         associate the current production Episode (see Issue #10 clarification).
       requestBody:
         required: true
@@ -330,7 +716,197 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/assets:
+    get:
+      tags: [assets]
+      operationId: listUserAssets
+      summary: List the current user's asset library
+      parameters:
+        - name: type
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/AssetType' }
+      responses:
+        '200':
+          description: User-level reusable assets.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Asset' }
+
+  /api/assets/{assetId}:
+    parameters:
+      - $ref: '#/components/parameters/AssetId'
+    get:
+      tags: [assets]
+      operationId: getAsset
+      summary: Get an Asset
+      responses:
+        '200':
+          description: Asset detail.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/Asset' } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [assets]
+      operationId: updateAsset
+      summary: Update an Asset by creating a new current revision
+      description: >-
+        This request never mutates historical AssetRevision data. It creates a new revision;
+        shared downstream application remains an explicit action through the revision apply endpoint.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateAssetRequest' }
+      responses:
+        '200':
+          description: Asset with its newly created current revision.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/AssetRevisionImpact' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/assets/{assetId}/reference-image-tasks:
+    parameters:
+      - $ref: '#/components/parameters/AssetId'
+    post:
+      tags: [assets]
+      operationId: createAssetReferenceImageTask
+      summary: Start reference-image generation for an Asset
+      description: Queues asset.image.generate using the Asset's current immutable revision.
+      responses:
+        '202': { $ref: '#/components/responses/TaskAccepted' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/assets/{assetId}/reference-images/{mediaFileId}/confirm:
+    parameters:
+      - $ref: '#/components/parameters/AssetId'
+      - $ref: '#/components/parameters/MediaFileId'
+    post:
+      tags: [assets]
+      operationId: confirmAssetReferenceImage
+      summary: Confirm an Asset reference-image candidate
+      responses:
+        '200':
+          description: Asset reference image selection confirmed.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/Asset' } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/assets/{assetId}/revisions:
+    parameters:
+      - $ref: '#/components/parameters/AssetId'
+    post:
+      tags: [assets]
+      operationId: createAssetRevision
+      summary: Create a shared Asset revision and calculate its impact
+      description: >-
+        Creating a shared revision does not mutate any Shot. The response gives the
+        affected scope; a separate apply call explicitly chooses target Shots.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAssetRevisionRequest'
+      responses:
+        '201':
+          description: Immutable Asset revision and its possible impact.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AssetRevisionImpact'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/assets/{assetId}/revisions/{revisionId}/apply:
+    parameters:
+      - $ref: '#/components/parameters/AssetId'
+      - $ref: '#/components/parameters/RevisionId'
+    post:
+      tags: [assets]
+      operationId: applyAssetRevision
+      summary: Apply a shared Asset revision to selected Shots
+      description: >-
+        Only selected Shots are invalidated. Their affected keyframes, PanelRevisions
+        and PanelVideos become stale; unrelated Shots remain unchanged.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplyAssetRevisionRequest'
+      responses:
+        '200':
+          description: Revision was applied to the selected scope.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AssetRevisionImpact'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   # ------------------------------------------------------------------ panels
+  /api/episodes/{episodeId}/panels:
+    parameters:
+      - $ref: '#/components/parameters/EpisodeId'
+    get:
+      tags: [panels]
+      operationId: listEpisodePanels
+      summary: List an Episode's panels and current revision pointers
+      responses:
+        '200':
+          description: Panels ordered for the current Episode.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Panel' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /api/episodes/{episodeId}/panels/assemble:
     parameters:
       - $ref: '#/components/parameters/EpisodeId'
@@ -367,25 +943,45 @@ paths:
           $ref: '#/components/responses/Conflict'
 
   # ------------------------------------------------------------------ videos
-  /api/episodes/{episodeId}/video-tasks/batch:
+  /api/panels/{panelId}/video-tasks:
     parameters:
-      - $ref: '#/components/parameters/EpisodeId'
+      - $ref: '#/components/parameters/PanelId'
     post:
       tags: [videos]
-      operationId: createVideoBatchTasks
-      summary: Batch-start shot video generation (#6 §18.12)
+      operationId: createPanelVideoTask
+      summary: Start PanelRevision video generation (#6 §18.12)
       description: >-
-        Creates one video.generate GenerationTask per targeted shot. When shotIds is
-        omitted, all shots in the episode are targeted.
+        Creates a video.generate GenerationTask from the Panel's current immutable
+        PanelRevision. A PanelVideo must never read mutable Shot or Asset state directly.
       requestBody:
         required: false
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/VideoBatchRequest'
+              $ref: '#/components/schemas/PanelVideoTaskRequest'
       responses:
         '202':
-          description: One GenerationTask per shot was created and queued.
+          $ref: '#/components/responses/TaskAccepted'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/episodes/{episodeId}/panel-video-tasks/batch:
+    parameters:
+      - $ref: '#/components/parameters/EpisodeId'
+    post:
+      tags: [videos]
+      operationId: createEpisodePanelVideoTasks
+      summary: Start PanelRevision video tasks for the Episode's selected panels
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PanelVideoBatchRequest' }
+      responses:
+        '202':
+          description: One video.generate task per eligible Panel current revision.
           content:
             application/json:
               schema:
@@ -395,12 +991,92 @@ paths:
                     properties:
                       data:
                         type: array
-                        items:
-                          $ref: '#/components/schemas/GenerationTask'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
+                        items: { $ref: '#/components/schemas/GenerationTask' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/panels/{panelId}/videos:
+    parameters:
+      - $ref: '#/components/parameters/PanelId'
+    get:
+      tags: [videos]
+      operationId: listPanelVideos
+      summary: List a Panel's video results
+      responses:
+        '200':
+          description: Videos grouped by immutable PanelRevision.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/PanelVideo' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/episodes/{episodeId}/panel-videos:
+    parameters:
+      - $ref: '#/components/parameters/EpisodeId'
+    get:
+      tags: [videos]
+      operationId: listEpisodePanelVideos
+      summary: List an Episode's Panel video results
+      responses:
+        '200':
+          description: Panel videos belonging to this Episode.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/PanelVideo' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/panels/{panelId}/videos/regenerate:
+    parameters:
+      - $ref: '#/components/parameters/PanelId'
+    post:
+      tags: [videos]
+      operationId: regeneratePanelVideo
+      summary: Regenerate video from the Panel's current revision
+      responses:
+        '202': { $ref: '#/components/responses/TaskAccepted' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/panels/{panelId}/videos/confirm:
+    parameters:
+      - $ref: '#/components/parameters/PanelId'
+    post:
+      tags: [videos]
+      operationId: confirmPanelVideo
+      summary: Confirm the Panel's selected video result
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConfirmPanelVideoRequest' }
+      responses:
+        '200':
+          description: Confirmed Panel video.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/PanelVideo' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
 
   # ---------------------------------------------------------- audio-subtitle
   /api/episodes/{episodeId}/audio-subtitle-tasks:
@@ -486,6 +1162,24 @@ paths:
   /api/timelines/{timelineId}/exports:
     parameters:
       - $ref: '#/components/parameters/TimelineId'
+    get:
+      tags: [exports]
+      operationId: listTimelineExports
+      summary: List a Timeline's exports
+      responses:
+        '200':
+          description: Exports created from this Timeline.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Export' }
+        '404': { $ref: '#/components/responses/NotFound' }
     post:
       tags: [exports]
       operationId: createExport
@@ -614,6 +1308,29 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/episodes/{episodeId}/tasks:
+    parameters:
+      - $ref: '#/components/parameters/EpisodeId'
+    get:
+      tags: [tasks]
+      operationId: listEpisodeTasks
+      summary: List an Episode's GenerationTasks
+      description: The workstation uses this endpoint to restore task cards after a page reload.
+      responses:
+        '200':
+          description: Task list for the Episode.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/GenerationTask' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /api/tasks/{taskId}/retry:
     parameters:
       - $ref: '#/components/parameters/TaskId'
@@ -672,6 +1389,41 @@ components:
       schema: { type: string, format: uuid }
     ScriptId:
       name: scriptId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ShotId:
+      name: shotId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    MaterialId:
+      name: materialId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    AssetId:
+      name: assetId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    RevisionId:
+      name: revisionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    PanelId:
+      name: panelId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    KeyframeId:
+      name: keyframeId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    MediaFileId:
+      name: mediaFileId
       in: path
       required: true
       schema: { type: string, format: uuid }
@@ -765,7 +1517,7 @@ components:
     AssetType:
       type: string
       description: 素材类型过滤枚举，取值与 business/asset.schema.json 保持一致。
-      enum: [character, scene, style, voice]
+      enum: [character, prop, scene, style]
 
     # -------- 业务对象 --------
     # 业务对象已抽取为独立的 JSON Schema 文件（packages/contracts/json-schema/business/），
@@ -782,8 +1534,22 @@ components:
       $ref: ../json-schema/business/shot.schema.json
     Asset:
       $ref: ../json-schema/business/asset.schema.json
+    AssetReference:
+      $ref: ../json-schema/business/asset-reference.schema.json
+    AssetRevision:
+      $ref: ../json-schema/business/asset-revision.schema.json
+    ShotAssetOverride:
+      $ref: ../json-schema/business/shot-asset-override.schema.json
+    ShotPromptRevision:
+      $ref: ../json-schema/business/shot-prompt-revision.schema.json
+    Keyframe:
+      $ref: ../json-schema/business/keyframe.schema.json
     Panel:
       $ref: ../json-schema/business/panel.schema.json
+    PanelRevision:
+      $ref: ../json-schema/business/panel-revision.schema.json
+    PanelVideo:
+      $ref: ../json-schema/business/panel-video.schema.json
     Timeline:
       $ref: ../json-schema/business/timeline.schema.json
     Export:
@@ -827,6 +1593,24 @@ components:
       properties:
         text: { type: string, minLength: 1 }
         title: { type: [string, 'null'] }
+    UpdateSourceMaterialRequest:
+      type: object
+      additionalProperties: false
+      required: [text]
+      properties:
+        text: { type: string, minLength: 1 }
+        title: { type: [string, 'null'] }
+    VideoCapability:
+      type: object
+      additionalProperties: false
+      required: [minPanelDurationSeconds, maxPanelDurationSeconds, supportedDurationsSeconds]
+      properties:
+        minPanelDurationSeconds: { type: integer, minimum: 1 }
+        maxPanelDurationSeconds: { type: integer, minimum: 1 }
+        supportedDurationsSeconds:
+          type: array
+          minItems: 1
+          items: { type: integer, minimum: 1 }
     ScriptTaskRequest:
       type: object
       additionalProperties: false
@@ -844,6 +1628,22 @@ components:
           minimum: 3
           maximum: 5
           description: Optional hint; the worker still targets 3-5 shots.
+    UpdateScriptRequest:
+      type: object
+      additionalProperties: false
+      required: [content]
+      properties:
+        content: { type: string, minLength: 1 }
+    UpdateShotRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        durationSeconds: { type: number, exclusiveMinimum: 0 }
+        shotSize: { type: [string, 'null'] }
+        cameraMovement: { type: [string, 'null'] }
+        action: { type: [string, 'null'] }
+        dialogue: { type: [string, 'null'] }
     AssetExtractTaskRequest:
       type: object
       additionalProperties: false
@@ -861,22 +1661,103 @@ components:
           type: object
           additionalProperties: true
           description: Optional aggregation spec (e.g. max panel duration).
-    VideoBatchRequest:
+    CreateShotPromptRevisionRequest:
       type: object
       additionalProperties: false
+      required: [prompt]
+      properties:
+        prompt:
+          type: string
+          minLength: 1
+        assetOverrides:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [assetId, attributes]
+            properties:
+              assetId: { type: string, format: uuid }
+              attributes: { type: object, additionalProperties: true }
+    CreateShotAssetOverrideRequest:
+      type: object
+      additionalProperties: false
+      required: [assetId, attributes]
+      properties:
+        assetId: { type: string, format: uuid }
+        attributes: { type: object, additionalProperties: true }
+    KeyframeBatchRequest:
+      type: object
+      additionalProperties: false
+      required: [shotIds]
       properties:
         shotIds:
           type: array
-          description: Target shots; when omitted, all episode shots are targeted.
+          minItems: 1
+          maxItems: 9
+          uniqueItems: true
           items: { type: string, format: uuid }
-    AudioSubtitleTaskRequest:
+    CreateAssetRevisionRequest:
+      type: object
+      additionalProperties: false
+      required: [attributes]
+      properties:
+        attributes: { type: object, additionalProperties: true }
+    UpdateAssetRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1 }
+        description: { type: [string, 'null'] }
+        attributes: { type: object, additionalProperties: true }
+    ApplyAssetRevisionRequest:
+      type: object
+      additionalProperties: false
+      required: [shotIds]
+      properties:
+        shotIds:
+          type: array
+          minItems: 1
+          items: { type: string, format: uuid }
+    AssetRevisionImpact:
+      type: object
+      additionalProperties: false
+      required: [revision, affectedShotIds, stalePanelRevisionIds, stalePanelVideoIds]
+      properties:
+        revision: { $ref: '#/components/schemas/AssetRevision' }
+        affectedShotIds:
+          type: array
+          items: { type: string, format: uuid }
+        stalePanelRevisionIds:
+          type: array
+          items: { type: string, format: uuid }
+        stalePanelVideoIds:
+          type: array
+          items: { type: string, format: uuid }
+    PanelVideoTaskRequest:
+      type: object
+      additionalProperties: false
+      properties: {}
+    PanelVideoBatchRequest:
       type: object
       additionalProperties: false
       properties:
-        voiceAssetId:
-          type: [string, 'null']
-          format: uuid
-          description: Optional fixed voice asset; MS1 may use a default timbre.
+        panelIds:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { type: string, format: uuid }
+          description: When omitted, the server queues every eligible Panel current revision in the Episode.
+    ConfirmPanelVideoRequest:
+      type: object
+      additionalProperties: false
+      required: [panelVideoId]
+      properties:
+        panelVideoId: { type: string, format: uuid }
+    AudioSubtitleTaskRequest:
+      type: object
+      additionalProperties: false
+      properties: {}
     TimelineComposeRequest:
       type: object
       additionalProperties: false

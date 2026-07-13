@@ -1,0 +1,7 @@
+# 仅供 Failsafe 的 -Pintegration verify 使用。
+# 集成测试连接本地 docker-compose 已发布的依赖，而不是启动嵌套 Testcontainers。
+# 明细只在测试进程中开启，生产默认仍由 application.yml 保持为 never。
+management:
+  endpoint:
+    health:
+      show-details: always

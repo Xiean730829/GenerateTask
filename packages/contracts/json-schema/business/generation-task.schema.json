@@ -9,6 +9,7 @@
   "required": [
     "id",
     "projectId",
+    "episodeId",
     "taskType",
     "status",
     "attempt",
@@ -29,7 +30,7 @@
     },
     "episodeId": {
       "description": "所属分集 ID。MS1 要求所有任务必须关联当前生产 Episode（见 Issue #10 补充说明）。",
-      "type": ["string", "null"],
+      "type": "string",
       "format": "uuid"
     },
     "shotId": {
@@ -86,6 +87,10 @@
     "errorMessage": {
       "description": "失败时的错误描述，可空",
       "type": ["string", "null"]
+    },
+    "retryable": {
+      "description": "失败是否允许进入重试流程。失败以外的状态为 null。",
+      "type": ["boolean", "null"]
     },
     "resultRef": {
       "description": "结果对象引用，例如 { scriptId: ... }。可空。",

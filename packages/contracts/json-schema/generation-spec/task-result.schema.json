@@ -7,6 +7,7 @@
   "required": [
     "messageId",
     "taskId",
+    "episodeId",
     "status",
     "attempt",
     "progress",
@@ -20,6 +21,11 @@
     "taskId": {
       "type": "string",
       "format": "uuid"
+    },
+    "episodeId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "MS1 frontends subscribe to task events by Episode, so every worker report retains its owning Episode."
     },
     "status": {
       "type": "string",
@@ -41,7 +47,7 @@
     "error": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["code", "message"],
+      "required": ["code", "message", "retryable"],
       "properties": {
         "code": {
           "type": "string",
@@ -50,15 +56,23 @@
         "message": {
           "type": "string",
           "minLength": 1
+        },
+        "retryable": {
+          "type": "boolean",
+          "description": "Whether Java may transition this failed task into retrying when retry_count is below max_retries."
         }
       }
     },
     "worker": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["workerId"],
+      "required": ["name", "version"],
       "properties": {
-        "workerId": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
           "type": "string",
           "minLength": 1
         }

@@ -66,7 +66,24 @@
     },
     "payload": {
       "type": "object",
-      "additionalProperties": true
+      "description": "Immutable input snapshot consumed by the worker. sourceText and projectConfig are supplied for every MS1 task; task-specific inputs may add fields.",
+      "additionalProperties": true,
+      "required": [
+        "sourceText",
+        "projectConfig"
+      ],
+      "properties": {
+        "sourceText": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Source text snapshot selected by Java when the task is created."
+        },
+        "projectConfig": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Project configuration snapshot, for example projectType, targetDurationSeconds, aspectRatio and style."
+        }
+      }
     }
   }
 }

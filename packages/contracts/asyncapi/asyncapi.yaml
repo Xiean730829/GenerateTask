@@ -4,6 +4,15 @@ info:
   version: 0.1.0
   description: Immutable GenerationTask execution messages published by Java and consumed by Python Workers.
 defaultContentType: application/json
+servers:
+  rabbitmq:
+    host: localhost:5672
+    protocol: amqp
+    description: Java-to-Python internal task delivery.
+  episodeWebSocket:
+    host: localhost:8080
+    protocol: ws
+    description: React workstation task-update stream; MS1 uses a single demo-user context.
 channels:
   taskExecution:
     address: drama.task.execute
@@ -15,6 +24,15 @@ channels:
     messages:
       taskExecution:
         $ref: '#/components/messages/TaskExecution'
+  episodeTaskUpdates:
+    address: /api/ws/episodes/{episodeId}
+    description: Java sends `task.updated` complete task snapshots for one Episode to the React workstation.
+    parameters:
+      episodeId:
+        description: The Episode whose GenerationTask updates are streamed.
+    messages:
+      taskUpdated:
+        $ref: '#/components/messages/TaskUpdated'
 operations:
   publishTaskExecution:
     action: send
@@ -23,11 +41,24 @@ operations:
     summary: Publish an immutable task execution message after Java creates a GenerationTask.
     messages:
       - $ref: '#/channels/taskExecution/messages/taskExecution'
+  receiveEpisodeTaskUpdates:
+    action: receive
+    channel:
+      $ref: '#/channels/episodeTaskUpdates'
+    summary: Receive a complete GenerationTask snapshot after a state or progress update.
+    messages:
+      - $ref: '#/channels/episodeTaskUpdates/messages/taskUpdated'
 components:
   messages:
     TaskExecution:
       name: TaskExecution
       title: GenerationTask execution message
-      summary: A Java-owned task execution request. Workers must not create taskId, messageId or attempt values.
+      summary: A Java-owned task execution request. Workers must not create taskId, messageId or attempt values; payload includes immutable sourceText and projectConfig snapshots.
       payload:
         $ref: ../json-schema/generation-spec/task-execution.schema.json
+    TaskUpdated:
+      name: TaskUpdated
+      title: Episode GenerationTask update
+      summary: Full task snapshot; clients replace their local task by taskId and reconcile after reconnecting.
+      payload:
+        $ref: ../json-schema/generation-spec/task-updated-event.schema.json

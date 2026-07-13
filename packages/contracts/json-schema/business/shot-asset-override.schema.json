@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/business/shot-asset-override.schema.json",
+  "title": "ShotAssetOverride 镜头资产局部覆盖",
+  "description": "仅在所属 ShotPromptRevision 内生效的资产属性覆盖，不修改共享 Asset 或其他镜头。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "shotId", "assetId", "attributes", "createdAt"],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "shotId": { "type": "string", "format": "uuid" },
+    "assetId": { "type": "string", "format": "uuid" },
+    "attributes": { "type": "object", "additionalProperties": true },
+    "createdAt": { "type": "string", "format": "date-time" }
+  }
+}

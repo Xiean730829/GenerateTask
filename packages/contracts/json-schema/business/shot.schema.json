@@ -59,6 +59,11 @@
       "description": "用于关键帧/视频生成的提示词，可空",
       "type": ["string", "null"]
     },
+    "currentPromptRevisionId": {
+      "description": "当前选用的不可变 ShotPromptRevision。generationPrompt 仅为工作台展示便利字段；生产任务以该版本为准。",
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
     "status": {
       "description": "镜头生产状态",
       "type": "string"

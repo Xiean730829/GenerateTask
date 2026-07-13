@@ -44,6 +44,11 @@
       "type": "object",
       "additionalProperties": true
     },
+    "currentRevisionId": {
+      "description": "当前可用于视频生成的不可变 PanelRevision；为空表示尚未满足组装条件。",
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
     "createdAt": {
       "description": "创建时间",
       "type": "string",

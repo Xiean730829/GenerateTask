@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.auto-drama-studio.local/business/asset.schema.json",
   "title": "Asset 素材",
-  "description": "用户级独立资产（角色/场景/风格/音色）。不归属于单个 Project，可被多个 Project、Episode、Shot 通过 AssetReference 引用。",
+  "description": "用户级独立资产（角色/道具/场景/风格）。不归属于单个 Project，可被多个 Project、Episode、Shot 通过 AssetReference 引用。角色音色保存在 character Asset 的 attributes 中，不是独立 Asset。",
   "type": "object",
   "additionalProperties": false,
   "required": ["id", "ownerUserId", "type", "name", "locked", "createdAt"],
@@ -18,9 +18,9 @@
       "format": "uuid"
     },
     "type": {
-      "description": "素材类型：character 角色，scene 场景，style 风格，voice 音色",
+      "description": "素材类型：character 角色，prop 道具，scene 场景，style 风格；角色音色保存在 character Asset 的 attributes 中。",
       "type": "string",
-      "enum": ["character", "scene", "style", "voice"]
+      "enum": ["character", "prop", "scene", "style"]
     },
     "name": {
       "description": "素材名称",
@@ -34,6 +34,11 @@
       "description": "参考图地址，可空",
       "type": ["string", "null"],
       "format": "uri"
+    },
+    "currentRevisionId": {
+      "description": "当前 AssetRevision。生成任务及后续显式 apply 只读取固定的 Revision，不读取可变属性。",
+      "type": ["string", "null"],
+      "format": "uuid"
     },
     "attributes": {
       "description": "素材结构化属性（风格标签、音色参数等）。MS1 阶段结构自由。",

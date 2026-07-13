@@ -1,0 +1,170 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  /* 浅色极简 — 中性黑白灰 + 极简语义色 */
+  --color-background: #ffffff;
+  --color-background-subtle: #fafafa;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #f5f5f5;
+  --color-surface-hover: #f0f0f0;
+  --color-border: #e5e5e5;
+  --color-border-strong: #d4d4d4;
+  --color-foreground: #171717;
+  --color-text-dim: #737373;
+  --color-text-muted: #a3a3a3;
+  --color-primary: #171717;
+  --color-primary-strong: #000000;
+  --color-primary-soft: #f5f5f5;
+  --color-on-primary: #ffffff;
+  --color-success: #16a34a;
+  --color-warning: #ca8a04;
+  --color-danger: #dc2626;
+  --color-stale: #737373;
+
+  --bg: var(--color-background);
+  --surface: var(--color-surface);
+  --surface-2: var(--color-surface-elevated);
+  --border: var(--color-border);
+  --text: var(--color-foreground);
+  --text-dim: var(--color-text-dim);
+  --primary: var(--color-primary);
+  --primary-strong: var(--color-primary-strong);
+  --primary-foreground: var(--color-on-primary);
+  --success: var(--color-success);
+  --warning: var(--color-warning);
+  --danger: var(--color-danger);
+  --stale: var(--color-stale);
+
+  --radius-sm: 8px;
+  --radius-md: 8px;
+  --radius-lg: 8px;
+  --radius-full: 999px;
+  --transition-fast: 150ms ease;
+  --transition-base: 200ms ease;
+
+  color-scheme: light;
+  color: var(--text);
+  font-family: Inter, 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--text);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--text-dim);
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+
+/* 营销页（首页/创建）— 宽松字号 */
+.page h1 {
+  font-size: clamp(1.75rem, 3vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.page h2 {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.page h3 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* 工作台 — 紧凑字号 */
+.workspace h2,
+.workspace h3 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+textarea,
+input,
+select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.75rem;
+  width: 100%;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+textarea {
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.workspace textarea,
+.workspace input,
+.workspace select {
+  font-size: 0.875rem;
+  padding: 0.5rem 0.65rem;
+}
+
+textarea:focus,
+input:focus,
+select:focus {
+  border-color: var(--color-border-strong);
+}
+
+textarea:disabled,
+input:disabled,
+select:disabled {
+  opacity: 0.5;
+  background: var(--surface-2);
+  cursor: not-allowed;
+}
+
+label > span {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-dim);
+}
+
+.workspace label > span {
+  font-size: 0.8125rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
