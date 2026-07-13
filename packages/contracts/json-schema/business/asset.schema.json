@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/business/asset.schema.json",
+  "title": "Asset 素材",
+  "description": "用户级独立资产（角色/场景/风格/音色）。不归属于单个 Project，可被多个 Project、Episode、Shot 通过 AssetReference 引用。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "ownerUserId", "type", "name", "locked", "createdAt"],
+  "properties": {
+    "id": {
+      "description": "素材唯一标识",
+      "type": "string",
+      "format": "uuid"
+    },
+    "ownerUserId": {
+      "description": "素材所有者用户 ID",
+      "type": "string",
+      "format": "uuid"
+    },
+    "type": {
+      "description": "素材类型：character 角色，scene 场景，style 风格，voice 音色",
+      "type": "string",
+      "enum": ["character", "scene", "style", "voice"]
+    },
+    "name": {
+      "description": "素材名称",
+      "type": "string"
+    },
+    "description": {
+      "description": "素材描述，可空",
+      "type": ["string", "null"]
+    },
+    "referenceImageUrl": {
+      "description": "参考图地址，可空",
+      "type": ["string", "null"],
+      "format": "uri"
+    },
+    "attributes": {
+      "description": "素材结构化属性（风格标签、音色参数等）。MS1 阶段结构自由。",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "locked": {
+      "description": "是否锁定。锁定后防止后续生成发生一致性漂移。",
+      "type": "boolean"
+    },
+    "createdAt": {
+      "description": "创建时间",
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

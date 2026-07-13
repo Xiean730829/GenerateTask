@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/business/panel.schema.json",
+  "title": "Panel 剧情片段",
+  "description": "剧情片段：由多个 Shot 按时间规范（TimeSpec）聚合而成，是视频最小生产单位。不提前生成，聚合后才存在。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "episodeId", "orderIndex", "shotIds", "createdAt"],
+  "properties": {
+    "id": {
+      "description": "剧情片段唯一标识",
+      "type": "string",
+      "format": "uuid"
+    },
+    "episodeId": {
+      "description": "所属分集 ID",
+      "type": "string",
+      "format": "uuid"
+    },
+    "name": {
+      "description": "片段名称，可空",
+      "type": ["string", "null"]
+    },
+    "orderIndex": {
+      "description": "片段在分集内的顺序，从 0 开始",
+      "type": "integer",
+      "minimum": 0
+    },
+    "shotIds": {
+      "description": "片段包含的镜头 ID 列表，按播放顺序排列",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      }
+    },
+    "durationSeconds": {
+      "description": "片段总时长（秒），可空",
+      "type": ["number", "null"],
+      "minimum": 0
+    },
+    "timeSpec": {
+      "description": "时间聚合规范（单片段最大时长等）。MS1 阶段结构自由。",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "createdAt": {
+      "description": "创建时间",
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

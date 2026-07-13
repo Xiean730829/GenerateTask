@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/business/export.schema.json",
+  "title": "Export 导出",
+  "description": "最终交付对象，由 Timeline 经 export.compose 任务（ffmpeg 合成）导出为 MP4，文件本体存 MinIO，此处仅保存元数据。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "timelineId", "status", "createdAt"],
+  "properties": {
+    "id": {
+      "description": "导出记录唯一标识",
+      "type": "string",
+      "format": "uuid"
+    },
+    "timelineId": {
+      "description": "来源时间线 ID",
+      "type": "string",
+      "format": "uuid"
+    },
+    "taskId": {
+      "description": "支撑导出的 export.compose 任务 ID，可空",
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "status": {
+      "description": "导出状态",
+      "type": "string",
+      "enum": ["pending", "queued", "running", "succeeded", "failed", "canceled"]
+    },
+    "fileUrl": {
+      "description": "成片访问地址。仅当 status 为 succeeded 时提供（MinIO 签名 URL）。",
+      "type": ["string", "null"],
+      "format": "uri"
+    },
+    "objectKey": {
+      "description": "对象存储 Key，可空。二进制文件不入数据库，也不保存本地绝对路径。",
+      "type": ["string", "null"]
+    },
+    "format": {
+      "description": "文件格式，例如 mp4，可空",
+      "type": ["string", "null"]
+    },
+    "resolution": {
+      "description": "分辨率，例如 1080x1920，可空",
+      "type": ["string", "null"]
+    },
+    "durationSeconds": {
+      "description": "成片时长（秒），可空",
+      "type": ["number", "null"],
+      "minimum": 0
+    },
+    "sizeBytes": {
+      "description": "文件大小（字节），可空",
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "createdAt": {
+      "description": "创建时间",
+      "type": "string",
+      "format": "date-time"
+    },
+    "finishedAt": {
+      "description": "导出完成时间，可空",
+      "type": ["string", "null"],
+      "format": "date-time"
+    }
+  }
+}

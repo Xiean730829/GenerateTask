@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/business/project.schema.json",
+  "title": "Project 项目",
+  "description": "短剧项目：项目业务上下文的最高层容器。除用户级 Asset 外，项目生产数据必须能追溯到 projectId。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "ownerUserId",
+    "name",
+    "projectType",
+    "stage",
+    "defaultEpisodeId",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": {
+      "description": "项目唯一标识",
+      "type": "string",
+      "format": "uuid"
+    },
+    "ownerUserId": {
+      "description": "项目所有者用户 ID",
+      "type": "string",
+      "format": "uuid"
+    },
+    "name": {
+      "description": "项目名称",
+      "type": "string"
+    },
+    "projectType": {
+      "description": "项目类型：single_episode 单集快创（MS1 默认），full_series 完整剧集",
+      "type": "string",
+      "enum": ["single_episode", "full_series"]
+    },
+    "stage": {
+      "description": "项目当前所处的主流程阶段（对应 Issue #6 §1.6）",
+      "type": "string",
+      "enum": [
+        "material",
+        "script",
+        "shot",
+        "asset",
+        "panel",
+        "video",
+        "audio",
+        "timeline",
+        "export"
+      ]
+    },
+    "targetDurationSeconds": {
+      "description": "目标成片时长（秒），可空",
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "aspectRatio": {
+      "description": "画幅比例，例如 9:16（竖屏短剧）",
+      "type": ["string", "null"]
+    },
+    "style": {
+      "description": "整体视觉风格描述，可空",
+      "type": ["string", "null"]
+    },
+    "defaultEpisodeId": {
+      "description": "默认分集 ID。单集快创项目只有一个默认 Episode。",
+      "type": "string",
+      "format": "uuid"
+    },
+    "createdAt": {
+      "description": "创建时间",
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "description": "最后更新时间",
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}
