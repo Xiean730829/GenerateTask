@@ -1,0 +1,33 @@
+asyncapi: 3.0.0
+info:
+  title: Auto Drama Studio Task Messaging
+  version: 0.1.0
+  description: Immutable GenerationTask execution messages published by Java and consumed by Python Workers.
+defaultContentType: application/json
+channels:
+  taskExecution:
+    address: drama.task.execute
+    description: Queue receiving task execution messages after a publisher confirm from the drama.tasks topic exchange.
+    x-rabbitmq:
+      exchange: drama.tasks
+      routingKey: task.execute
+      deadLetterQueue: drama.task.dlq
+    messages:
+      taskExecution:
+        $ref: '#/components/messages/TaskExecution'
+operations:
+  publishTaskExecution:
+    action: send
+    channel:
+      $ref: '#/channels/taskExecution'
+    summary: Publish an immutable task execution message after Java creates a GenerationTask.
+    messages:
+      - $ref: '#/channels/taskExecution/messages/taskExecution'
+components:
+  messages:
+    TaskExecution:
+      name: TaskExecution
+      title: GenerationTask execution message
+      summary: A Java-owned task execution request. Workers must not create taskId, messageId or attempt values.
+      payload:
+        $ref: ../json-schema/generation-spec/task-execution.schema.json

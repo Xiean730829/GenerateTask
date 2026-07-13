@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/generation-spec/task-result.schema.json",
+  "title": "GenerationTask result report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "messageId",
+    "taskId",
+    "status",
+    "attempt",
+    "progress",
+    "reportedAt"
+  ],
+  "properties": {
+    "messageId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "taskId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["running", "succeeded", "failed"]
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "progress": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "worker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["workerId"],
+      "properties": {
+        "workerId": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "reportedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}
