@@ -12,6 +12,10 @@
     "panelRevisionId": { "type": "string", "format": "uuid" },
     "taskId": { "type": ["string", "null"], "format": "uuid" },
     "mediaFileId": { "type": ["string", "null"], "format": "uuid" },
+    "mediaFile": {
+      "description": "关联媒体文件的可读视图（含 OSS 签名地址），便于前端直接预览片段视频；可空。",
+      "oneOf": [{ "type": "null" }, { "$ref": "media-file.schema.json" }]
+    },
     "status": { "type": "string", "enum": ["pending", "running", "succeeded", "failed", "stale"] },
     "createdAt": { "type": "string", "format": "date-time" }
   }

@@ -1,63 +1,51 @@
 import type { ExportService } from '@/api/contracts'
-import type { ExportJob } from '@/api/types'
+import type { Export } from '@/api/types'
 import { backend } from '@/mocks/backend'
 import { clone, mockId, nowIso } from '@/mocks/backend/util'
 
-const COST_PER_SEC: Record<string, number> = { '480p': 1, '720p': 2, '1080p': 4 }
-
 export const mockExportService: ExportService = {
   async getByEpisode(episodeId) {
-    const job = backend.db.getEpisodeState(episodeId).exportJob
-    return job ? clone(job) : null
-  },
-
-  async estimate(episodeId, options) {
-    const state = backend.db.getEpisodeState(episodeId)
-    const durationSec = state.timeline?.totalDurationSec ?? 0
-    const rate = COST_PER_SEC[options.resolution] ?? 2
-    return {
-      options,
-      durationSec,
-      estimatedCost: durationSec * rate,
-      currency: '积分',
-    }
+    const record = backend.db.getEpisodeState(episodeId).exportRecord
+    return record ? clone(record) : null
   },
 
   async create(episodeId, options) {
     const state = backend.db.getEpisodeState(episodeId)
+    if (!state.timeline) throw new Error('请先合成时间线')
     const ts = nowIso()
-    const job: ExportJob = {
+    const record: Export = {
       id: mockId('exp'),
-      episodeId,
-      options,
-      status: 'rendering',
-      downloadUrl: null,
+      timelineId: state.timeline.id,
       taskId: null,
+      status: 'running',
+      fileUrl: null,
+      objectKey: null,
+      format: options.format,
+      resolution: options.resolution,
+      durationSeconds: state.timeline.videoTrack.reduce((s, c) => s + c.durationSeconds, 0),
+      sizeBytes: null,
       createdAt: ts,
-      updatedAt: ts,
+      finishedAt: null,
     }
-    state.exportJob = job
+    state.exportRecord = record
     const task = backend.engine.start({
       episodeId,
-      taskType: 'export.render',
+      taskType: 'export.compose',
       onSucceed: () => {
         const s = backend.db.getEpisodeState(episodeId)
-        if (s.exportJob) {
-          s.exportJob.status = 'ready'
-          s.exportJob.downloadUrl = `mock://export/${s.exportJob.id}.${options.format}`
-          s.exportJob.updatedAt = nowIso()
+        if (s.exportRecord) {
+          s.exportRecord.status = 'succeeded'
+          s.exportRecord.fileUrl = `mock://export/${s.exportRecord.id}.${options.format}`
+          s.exportRecord.finishedAt = nowIso()
         }
-        return { exportId: job.id }
+        return { exportId: record.id }
       },
       onFail: () => {
         const s = backend.db.getEpisodeState(episodeId)
-        if (s.exportJob) {
-          s.exportJob.status = 'failed'
-          s.exportJob.updatedAt = nowIso()
-        }
+        if (s.exportRecord) s.exportRecord.status = 'failed'
       },
     })
-    job.taskId = task.taskId
-    return { taskId: task.taskId }
+    record.taskId = task.id
+    return { taskId: task.id }
   },
 }

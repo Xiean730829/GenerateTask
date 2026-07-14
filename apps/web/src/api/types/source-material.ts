@@ -1,17 +1,19 @@
 import type { Id, IsoDateTime } from './common'
 
-/**
- * 输入材料。MS1 固定为必填纯文本，不含文件上传。
- */
+export type SourceMaterialType = 'text' | 'file'
+
+/** 输入材料，与 source-material.schema.json 对齐。 */
 export interface SourceMaterial {
   id: Id
-  episodeId: Id
-  kind: 'text'
-  text: string
+  projectId: Id
+  type: SourceMaterialType
+  text: string | null
+  title: string | null
+  status: string
   createdAt: IsoDateTime
-  updatedAt: IsoDateTime
 }
 
 export interface UpdateSourceMaterialInput {
   text: string
+  title?: string | null
 }

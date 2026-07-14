@@ -1,8 +1,8 @@
 import type { Id, IsoDateTime } from './common'
 
 /**
- * GenerationTask 的类型。MS1 的每个异步动作都落到其中一种。
- * 素材抽取虽是“项目级”动作，但任务仍必须关联 episodeId。
+ * GenerationTask 类型，与 generation-task.schema.json 对齐。
+ * panel.assemble / timeline.compose 为同步 Java 聚合，无对应 taskType。
  */
 export type TaskType =
   | 'script.generate'
@@ -10,12 +10,10 @@ export type TaskType =
   | 'asset.extract'
   | 'asset.image.generate'
   | 'keyframe.generate'
-  | 'panel.assemble'
-  | 'panel-video.generate'
-  | 'timeline.compose'
-  | 'export.render'
+  | 'video.generate'
+  | 'audio.subtitle'
+  | 'export.compose'
 
-/** 任务状态机。retrying 为失败重试后的过渡态，canceled 为用户取消。 */
 export type TaskStatus =
   | 'pending'
   | 'queued'
@@ -25,34 +23,43 @@ export type TaskStatus =
   | 'retrying'
   | 'canceled'
 
-export interface TaskError {
-  code: string
-  message: string
-  /** 是否可重试，以服务端为准；前端不猜测。 */
-  retryable: boolean
+/** 完整任务快照（REST）。WebSocket 事件在 adapter 层将 taskId 归一为 id。 */
+export interface GenerationTask {
+  id: Id
+  projectId: Id
+  episodeId: Id
+  shotId: Id | null
+  panelId: Id | null
+  taskType: TaskType
+  status: TaskStatus
+  attempt: number
+  progress: number
+  errorCode: string | null
+  errorMessage: string | null
+  retryable: boolean | null
+  resultRef: Record<string, unknown> | null
+  costPoints: number | null
+  createdAt: IsoDateTime
+  updatedAt: IsoDateTime
 }
 
-/** 完整任务快照。WebSocket 事件与任务查询接口返回同一形状。 */
-export interface GenerationTask {
+/** WS task.updated 原始载荷（task-updated-event.schema.json）。 */
+export interface TaskUpdatedWsPayload {
   taskId: Id
   episodeId: Id
   taskType: TaskType
   status: TaskStatus
-  /** 0–100。 */
   progress: number
-  /** 任务产物的引用信息（如 scriptId、panelId 列表）；终态成功时非空。 */
-  result: unknown | null
-  error: TaskError | null
+  result: Record<string, unknown> | null
+  error: { code: string; message: string; retryable: boolean } | null
   updatedAt: IsoDateTime
 }
 
-/** Episode 范围 WebSocket 推送的任务更新事件（完整状态快照）。 */
 export interface TaskUpdatedEvent {
   type: 'task.updated'
   data: GenerationTask
 }
 
-/** 终态：不再推送，前端停止订阅该任务。 */
 export const TERMINAL_TASK_STATUSES: readonly TaskStatus[] = [
   'succeeded',
   'failed',
@@ -63,7 +70,27 @@ export function isTerminalStatus(status: TaskStatus): boolean {
   return TERMINAL_TASK_STATUSES.includes(status)
 }
 
-/** 仅 pending / queued 可取消。 */
 export function isCancelable(status: TaskStatus): boolean {
   return status === 'pending' || status === 'queued'
+}
+
+export function taskFromWsPayload(payload: TaskUpdatedWsPayload, projectId: Id): GenerationTask {
+  return {
+    id: payload.taskId,
+    projectId,
+    episodeId: payload.episodeId,
+    shotId: null,
+    panelId: null,
+    taskType: payload.taskType,
+    status: payload.status,
+    attempt: 0,
+    progress: payload.progress,
+    errorCode: payload.error?.code ?? null,
+    errorMessage: payload.error?.message ?? null,
+    retryable: payload.error?.retryable ?? null,
+    resultRef: payload.result,
+    costPoints: null,
+    createdAt: payload.updatedAt,
+    updatedAt: payload.updatedAt,
+  }
 }

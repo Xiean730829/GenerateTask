@@ -1,39 +1,32 @@
-import type {
-  AspectRatio,
-  ExportFormat,
-  Id,
-  IsoDateTime,
-  Resolution,
-} from './common'
+import type { AspectRatio, ExportFormat, Id, IsoDateTime, Resolution } from './common'
 
-/** 导出参数。 */
+export type ExportStatus =
+  | 'pending'
+  | 'queued'
+  | 'running'
+  | 'succeeded'
+  | 'failed'
+  | 'canceled'
+
+/** 导出参数（UI 表单）。 */
 export interface ExportOptions {
   format: ExportFormat
   aspectRatio: AspectRatio
   resolution: Resolution
 }
 
-/** 导出成本预估，导出确认前必须展示。 */
-export interface ExportEstimate {
-  options: ExportOptions
-  /** 预计时长（秒）。 */
-  durationSec: number
-  /** 预估成本（演示用积分）。 */
-  estimatedCost: number
-  currency: string
-}
-
-export type ExportStatus = 'none' | 'rendering' | 'ready' | 'failed'
-
-/** Export 任务与产物。 */
-export interface ExportJob {
+/** Export，与 export.schema.json 对齐。 */
+export interface Export {
   id: Id
-  episodeId: Id
-  options: ExportOptions
-  status: ExportStatus
-  /** 成功后的下载地址。 */
-  downloadUrl: string | null
+  timelineId: Id
   taskId: Id | null
+  status: ExportStatus
+  fileUrl: string | null
+  objectKey: string | null
+  format: string | null
+  resolution: string | null
+  durationSeconds: number | null
+  sizeBytes: number | null
   createdAt: IsoDateTime
-  updatedAt: IsoDateTime
+  finishedAt: IsoDateTime | null
 }

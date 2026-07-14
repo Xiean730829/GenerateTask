@@ -12,9 +12,9 @@ export function NewProjectPage() {
   const navigate = useNavigate()
   const [name, setName] = useState('')
   const [sourceText, setSourceText] = useState('')
-  const [targetDurationSec, setDuration] = useState(45)
+  const [targetDurationSeconds, setDuration] = useState(45)
   const [aspectRatio, setAspect] = useState<AspectRatio>('9:16')
-  const [visualStyle, setStyle] = useState<string>('不指定')
+  const [style, setStyle] = useState<string>('不指定')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -27,11 +27,11 @@ export function NewProjectPage() {
       const res = await api.projects.create({
         name: name.trim(),
         sourceText: sourceText.trim(),
-        targetDurationSec,
+        targetDurationSeconds,
         aspectRatio,
-        visualStyle: visualStyle === '不指定' ? null : visualStyle,
+        style: style === '不指定' ? null : style,
       })
-      navigate(`/projects/${res.project.id}/episodes/${res.episodeId}`)
+      navigate(`/projects/${res.project.id}/episodes/${res.defaultEpisode.id}`)
     } catch (e) {
       setError(errText(e))
       setSubmitting(false)
@@ -76,7 +76,7 @@ export function NewProjectPage() {
               <input
                 type="number"
                 min={10}
-                value={targetDurationSec}
+                value={targetDurationSeconds}
                 onChange={(e) => setDuration(Number(e.target.value) || 45)}
               />
             </label>
@@ -90,7 +90,7 @@ export function NewProjectPage() {
             </label>
             <label className="stack" style={{ gap: '0.35rem' }}>
               <span>视觉风格（可选）</span>
-              <select value={visualStyle} onChange={(e) => setStyle(e.target.value)}>
+              <select value={style} onChange={(e) => setStyle(e.target.value)}>
                 {STYLES.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}

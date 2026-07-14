@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Asset, Shot } from '@/api'
+import { groupKeyframesByShot } from '@/api/types/keyframe'
 import { getShotPromptReferences } from '@/api/prompt-references'
 import { TaskStatusInline } from '@/components/feedback/TaskStatusInline'
 import { Badge } from '@/components/ui/Badge'
@@ -8,16 +9,19 @@ import { HorizontalScroll } from '@/components/ui/HorizontalScroll'
 import { StageHeader } from '@/features/episode/StageHeader'
 import { allShotsHaveSelectedKeyframe } from '@/features/episode/stages'
 import { useLatestTaskByType } from '@/hooks/useLatestTaskByType'
+import { mediaUrlFromId } from '@/lib/media-url'
 import { useWorkspaceState, useWorkspaceStore } from '@/stores/workspace-context'
 import { ShotMaterialsPanel } from './ShotMaterialsPanel'
 import { type PromptReference, ShotPromptPreview } from './ShotPromptPreview'
 
+function isAssetReady(asset: Asset): boolean {
+  return !!asset.currentRevisionId && !!asset.referenceImageUrl
+}
+
 /** MS1 Prompt 每类只渲染一个引用；已关联但未渲染的历史资产不能阻塞生成。 */
-function promptAssetsForShot(shot: Shot, assets: Asset[]): Asset[] {
+function promptAssetsForShot(shot: Shot, shotAssets: Asset[]): Asset[] {
   return getShotPromptReferences(shot).map((reference) =>
-    shot.materialAssetIds.map((id) => assets.find((asset) => asset.id === id)).find(
-      (asset) => asset?.kind === reference.kind && asset.name === reference.name,
-    ),
+    shotAssets.find((asset) => asset.type === reference.type && asset.name === reference.name),
   ).filter((asset): asset is Asset => !!asset)
 }
 
@@ -29,6 +33,7 @@ export function ShotStage({ onNext }: { onNext: () => void }) {
   const store = useWorkspaceStore()
   const state = useWorkspaceState()
   const shotTask = useLatestTaskByType('shot.generate')
+  const keyframesByShot = useMemo(() => groupKeyframesByShot(state.keyframes), [state.keyframes])
   const [selectedId, setSelectedId] = useState<string | null>(state.shots[0]?.id ?? null)
   const [busy, setBusy] = useState(false)
   const generatingShots = state.shots.length === 0 && state.script?.status === 'confirmed' && shotTask?.status !== 'failed'
@@ -36,11 +41,11 @@ export function ShotStage({ onNext }: { onNext: () => void }) {
   const [requestedReference, setRequestedReference] = useState<PromptReference | null>(null)
   const preparedShotIds = useRef(new Set<string>())
   const promptReferences = selected ? getShotPromptReferences(selected) : []
-  const activeReference = promptReferences.find((reference) => reference.name === requestedReference?.name && reference.kind === requestedReference?.kind)
-    ?? promptReferences.find((reference) => reference.kind === 'scene')
+  const activeReference = promptReferences.find((reference) => reference.name === requestedReference?.name && reference.type === requestedReference?.type)
+    ?? promptReferences.find((reference) => reference.type === 'scene')
     ?? promptReferences[0]
   const allSelected = allShotsHaveSelectedKeyframe(state)
-  const firstPendingIndex = state.shots.findIndex((shot) => !state.keyframes.find((entry) => entry.shotId === shot.id)?.selectedKeyframeId)
+  const firstPendingIndex = state.shots.findIndex((shot) => !keyframesByShot.some((entry) => entry.shotId === shot.id && entry.selectedKeyframeId))
   const nextBatch = useMemo(() => {
     if (firstPendingIndex < 0) return []
     const remaining = state.shots.slice(firstPendingIndex)
@@ -48,8 +53,8 @@ export function ShotStage({ onNext }: { onNext: () => void }) {
   }, [firstPendingIndex, state.shots])
   const pendingMaterials = nextBatch.map((shot) => {
     const expected = getShotPromptReferences(shot).length
-    const linked = promptAssetsForShot(shot, state.assets)
-    const unconfirmed = linked.filter((asset) => !asset || asset.imageStatus !== 'confirmed')
+    const linked = promptAssetsForShot(shot, state.shotAssets[shot.id] ?? [])
+    const unconfirmed = linked.filter((asset) => !isAssetReady(asset))
     return { shot, linked, unconfirmed, expected }
   }).filter(({ linked, unconfirmed, expected }) => linked.length !== expected || unconfirmed.length > 0)
   const pendingByShotId = useMemo(
@@ -59,17 +64,16 @@ export function ShotStage({ onNext }: { onNext: () => void }) {
   const nextBatchIds = useMemo(() => new Set(nextBatch.map((shot) => shot.id)), [nextBatch])
   const batchReady = nextBatch.length > 0 && pendingMaterials.length === 0
   const materialBlockerSummary = pendingMaterials.length > 0
-    ? `镜头 ${pendingMaterials.map(({ shot }) => shot.order).join('、')} 素材未就绪`
+    ? `镜头 ${pendingMaterials.map(({ shot }) => shot.orderIndex + 1).join('、')} 素材未就绪`
     : undefined
-  const nextEntry = nextBatch[0] && state.keyframes.find((entry) => entry.shotId === nextBatch[0].id)
+  const nextEntry = nextBatch[0] && keyframesByShot.find((entry) => entry.shotId === nextBatch[0].id)
   const nextHasCandidate = !!nextEntry?.candidates.length && !nextEntry.selectedKeyframeId
 
-  // MS1 中素材候选随镜头打开自动准备，不要求用户先执行“识别”操作。
   useEffect(() => {
-    if (!selected || selected.materialAssetIds.length > 0 || preparedShotIds.current.has(selected.id)) return
+    if (!selected || (state.shotAssets[selected.id]?.length ?? 0) > 0 || preparedShotIds.current.has(selected.id)) return
     preparedShotIds.current.add(selected.id)
     void store.prepareShotMaterials(selected.id)
-  }, [selected, store])
+  }, [selected, state.shotAssets, store])
 
   useEffect(() => {
     if (state.shots.length > 0 && !state.shots.some((shot) => shot.id === selectedId)) {
@@ -125,26 +129,26 @@ export function ShotStage({ onNext }: { onNext: () => void }) {
         <HorizontalScroll bleed role="list" aria-label="镜头胶卷">
           <div className="filmstrip">
           {state.shots.map((shot) => {
-            const keyframe = state.keyframes.find((entry) => entry.shotId === shot.id)
-            const selectedKeyframe = keyframe?.selectedKeyframeId
-            const keyframePreview = keyframe?.candidates.find((item) => item.id === selectedKeyframe) ?? keyframe?.candidates[0]
+            const entry = keyframesByShot.find((item) => item.shotId === shot.id)
+            const selectedKeyframe = entry?.selectedKeyframeId
+            const keyframePreview = entry?.candidates.find((item) => item.id === selectedKeyframe) ?? entry?.candidates[0]
             const expectedRefs = getShotPromptReferences(shot).length
-            const promptAssets = promptAssetsForShot(shot, state.assets)
-            const materialReady = promptAssets.length === expectedRefs && promptAssets.every((asset) => asset.imageStatus === 'confirmed')
+            const promptAssets = promptAssetsForShot(shot, state.shotAssets[shot.id] ?? [])
+            const materialReady = promptAssets.length === expectedRefs && promptAssets.every(isAssetReady)
             const pendingCount = promptAssets.length !== expectedRefs
               ? null
-              : promptAssets.filter((asset) => asset.imageStatus !== 'confirmed').length
+              : promptAssets.filter((asset) => !isAssetReady(asset)).length
             const pending = pendingByShotId.get(shot.id)
             const showKeyframeConfirm = !allSelected && nextHasCandidate && nextBatch[0]?.id === shot.id
             return <div key={shot.id} className="film-item" role="listitem">
               <button type="button" className={`film-card ${selected?.id === shot.id ? 'is-selected' : ''}`} onClick={() => setSelectedId(shot.id)}>
                 <div className="film-card-head">
-                  <span className="film-shot">镜头 {shot.order}</span>
-                  <span>{shot.durationSec}s</span>
+                  <span className="film-shot">镜头 {shot.orderIndex + 1}</span>
+                  <span>{shot.durationSeconds ?? 0}s</span>
                 </div>
                 {keyframePreview && (
                   <div className={`film-keyframe ${selectedKeyframe ? 'is-confirmed' : ''}`}>
-                    <img src={keyframePreview.imageUrl} alt={`镜头 ${shot.order} 的关键帧`} />
+                    <img src={mediaUrlFromId(keyframePreview.mediaFileId)} alt={`镜头 ${shot.orderIndex + 1} 的关键帧`} />
                   </div>
                 )}
                 <small>{selectedKeyframe ? '关键帧已确认' : materialReady ? '可生成关键帧' : pendingCount === null ? '候选准备中' : `待选 ${pendingCount} 项`}</small>
@@ -170,12 +174,12 @@ export function ShotStage({ onNext }: { onNext: () => void }) {
         {!allSelected && (nextHasCandidate || batchReady) && (
           <p className="batch-note">
             {nextHasCandidate
-              ? `请先确认镜头 ${nextBatch[0]?.order} 的关键帧，才能继续下一组。`
-              : `下一次将按顺序生成镜头 ${nextBatch.map((shot) => shot.order).join('、')} 的一张九宫格${nextBatch.length < 9 ? `，剩余 ${9 - nextBatch.length} 格留空` : ''}。`}
+              ? `请先确认镜头 ${(nextBatch[0]?.orderIndex ?? 0) + 1} 的关键帧，才能继续下一组。`
+              : `下一次将按顺序生成镜头 ${nextBatch.map((shot) => shot.orderIndex + 1).join('、')} 的一张九宫格${nextBatch.length < 9 ? `，剩余 ${9 - nextBatch.length} 格留空` : ''}。`}
           </p>
         )}
-        {selected && <div className="shot-detail-grid">
-          <div className="shot-settings"><ShotPromptPreview shot={selected} activeReference={activeReference} onSelectReference={setRequestedReference} visualStyle={state.project?.visualStyle} /></div>
+        {selected && activeReference && <div className="shot-detail-grid">
+          <div className="shot-settings"><ShotPromptPreview shot={selected} activeReference={activeReference} onSelectReference={setRequestedReference} visualStyle={state.project?.style} /></div>
           <ShotMaterialsPanel shot={selected} activeReference={activeReference} enabled />
         </div>}
       </>}

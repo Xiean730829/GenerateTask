@@ -6,7 +6,8 @@ import type {
   EpisodeTaskEventSource,
   TaskEventListener,
 } from '@/api/contracts'
-import type { Id, TaskUpdatedEvent } from '@/api/types'
+import type { Id, TaskUpdatedEvent, TaskUpdatedWsPayload } from '@/api/types'
+import { taskFromWsPayload } from '@/api/types/task'
 
 class HttpEpisodeSocket {
   private ws: WebSocket | null = null
@@ -57,10 +58,13 @@ class HttpEpisodeSocket {
   private handleMessage(raw: unknown): void {
     if (typeof raw !== 'string') return
     try {
-      const parsed = JSON.parse(raw) as TaskUpdatedEvent
-      if (parsed?.type === 'task.updated') {
-        this.listeners.forEach((l) => l(parsed))
+      const parsed = JSON.parse(raw) as { type?: string; data?: TaskUpdatedWsPayload }
+      if (parsed?.type !== 'task.updated' || !parsed.data) return
+      const event: TaskUpdatedEvent = {
+        type: 'task.updated',
+        data: taskFromWsPayload(parsed.data, ''),
       }
+      this.listeners.forEach((l) => l(event))
     } catch {
       // 忽略无法解析的帧。
     }

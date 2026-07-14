@@ -1,13 +1,16 @@
 import type { StageKey, StageStatus, TaskType } from '@/api'
+import { groupKeyframesByShot } from '@/api/types/keyframe'
+import { isPanelVideoReady } from '@/api/types/panel'
+import { isTimelineFresh } from '@/api/types/timeline'
 import type { WorkspaceState } from '@/stores/workspace-types'
 import { isStageUnlocked } from './stages'
 
 const STAGE_TASK_TYPES: Partial<Record<StageKey, TaskType>> = {
   script: 'script.generate',
   shot: 'shot.generate',
-  panel: 'panel.assemble',
-  timeline: 'timeline.compose',
-  export: 'export.render',
+  panel: 'video.generate',
+  timeline: 'audio.subtitle',
+  export: 'export.compose',
 }
 
 function hasActiveTask(s: WorkspaceState, type: TaskType): boolean {
@@ -20,7 +23,6 @@ function hasFailedTask(s: WorkspaceState, type: TaskType): boolean {
   return Object.values(s.tasks).some((t) => t.taskType === type && t.status === 'failed')
 }
 
-/** 推导单个阶段在导航中的展示状态。 */
 export function deriveStageStatus(s: WorkspaceState, key: StageKey): StageStatus {
   const taskType = STAGE_TASK_TYPES[key]
   if (taskType && hasActiveTask(s, taskType)) return 'active'
@@ -32,6 +34,7 @@ export function deriveStageStatus(s: WorkspaceState, key: StageKey): StageStatus
 }
 
 function isStageDone(s: WorkspaceState, key: StageKey): boolean {
+  const keyframesByShot = groupKeyframesByShot(s.keyframes)
   switch (key) {
     case 'input':
       return !!s.sourceMaterial
@@ -39,19 +42,19 @@ function isStageDone(s: WorkspaceState, key: StageKey): boolean {
       return s.script?.status === 'confirmed'
     case 'shot':
       return s.shots.length > 0 && s.shots.every((shot) =>
-        s.keyframes.some((k) => k.shotId === shot.id && k.selectedKeyframeId))
+        keyframesByShot.some((k) => k.shotId === shot.id && k.selectedKeyframeId))
     case 'panel':
-      return s.panelVideos.length > 0 && s.panelVideos.every((v) => v.status === 'ready')
+      return s.panelVideos.length > 0 && s.panelVideos.every(isPanelVideoReady)
     case 'timeline':
-      return !!s.timeline && s.timeline.freshness === 'fresh'
+      return isTimelineFresh(s.timeline)
     case 'export':
-      return s.exportJob?.status === 'ready'
+      return s.exportRecord?.status === 'succeeded'
   }
 }
 
 function isStageStale(s: WorkspaceState, key: StageKey): boolean {
   if (key === 'panel') return s.panelVideos.some((v) => v.status === 'stale')
-  if (key === 'timeline') return !!s.timeline && s.timeline.freshness === 'stale'
+  if (key === 'timeline') return !!s.timeline && s.timeline.status === 'stale'
   return false
 }
 

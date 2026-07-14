@@ -1,6 +1,6 @@
 import type { Id, IsoDateTime } from './common'
 
-/** MS1 的生产阶段，与顶部阶段导航一一对应。 */
+/** MS1 工作台阶段导航 key（前端 UI 概念，非 REST 实体）。 */
 export type StageKey =
   | 'input'
   | 'script'
@@ -9,19 +9,22 @@ export type StageKey =
   | 'timeline'
   | 'export'
 
-/** 阶段在导航中的展示状态。 */
 export type StageStatus =
-  | 'done' // 已完成
-  | 'active' // 进行中
-  | 'pending' // 待处理（前置未满足或未开始）
-  | 'failed' // 该阶段任务失败
-  | 'stale' // 因上游改动而失效
+  | 'done'
+  | 'active'
+  | 'pending'
+  | 'failed'
+  | 'stale'
 
-/** 单集，MS1 工作台的核心范围。 */
+/** 分集，与 episode.schema.json 对齐。 */
 export interface Episode {
   id: Id
   projectId: Id
-  title: string
+  title: string | null
+  synopsis: string | null
+  orderIndex: number
+  targetDurationSeconds: number | null
+  status: string
   createdAt: IsoDateTime
   updatedAt: IsoDateTime
 }

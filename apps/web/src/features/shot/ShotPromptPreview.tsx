@@ -1,7 +1,7 @@
 import type { Shot } from '@/api'
 import { getShotPromptReferences, type PromptReference } from '@/api/prompt-references'
 import { Badge } from '@/components/ui/Badge'
-import { ASSET_KIND_LABELS } from '@/features/asset/asset-labels'
+import { ASSET_TYPE_LABELS } from '@/features/asset/asset-labels'
 import { MOVEMENT_LABELS, SHOT_SIZE_LABELS } from './shot-labels'
 
 /**
@@ -23,34 +23,34 @@ export function ShotPromptPreview({
   visualStyle?: string | null
 }) {
   const references = getShotPromptReferences(shot)
-  const character = references.find((reference) => reference.kind === 'character')!
-  const scene = references.find((reference) => reference.kind === 'scene')!
-  const prop = references.find((reference) => reference.kind === 'prop')
-  const style = references.find((reference) => reference.kind === 'style')!
+  const character = references.find((reference) => reference.type === 'character')!
+  const scene = references.find((reference) => reference.type === 'scene')!
+  const prop = references.find((reference) => reference.type === 'prop')
+  const style = references.find((reference) => reference.type === 'style')!
   const styleRef = visualStyle ? { ...style, name: visualStyle } : style
 
   return (
     <section className="card shot-prompt-preview">
       <div className="prompt-heading">
-        <h3>镜头 {shot.order}</h3>
+        <h3>镜头 {shot.orderIndex + 1}</h3>
         <Badge tone="active">只读 Prompt</Badge>
       </div>
       <div className="prompt-kicker">结构化提示词</div>
       <p className="prompt-copy">
-        {SHOT_SIZE_LABELS[shot.size]}，{MOVEMENT_LABELS[shot.movement]}机位。<AssetMention reference={character} active={sameReference(activeReference, character)} onSelect={onSelectReference} />
+        {SHOT_SIZE_LABELS[shot.shotSize ?? ''] ?? shot.shotSize}，{MOVEMENT_LABELS[shot.cameraMovement ?? ''] ?? shot.cameraMovement}机位。<AssetMention reference={character} active={sameReference(activeReference, character)} onSelect={onSelectReference} />
         {prop ? <> 与 <AssetMention reference={prop} active={sameReference(activeReference, prop)} onSelect={onSelectReference} /></> : null}
-        {' '}在 <AssetMention reference={scene} active={sameReference(activeReference, scene)} onSelect={onSelectReference} /> 中{formatActionForPrompt(shot.action)}。
+        {' '}在 <AssetMention reference={scene} active={sameReference(activeReference, scene)} onSelect={onSelectReference} /> 中{formatActionForPrompt(shot.action ?? '')}。
       </p>
       <p className="prompt-style">
         画风：<AssetMention reference={styleRef} active={sameReference(activeReference, styleRef)} onSelect={onSelectReference} />
       </p>
-      {shot.dialogue.trim() && <p className="prompt-dialogue">
+      {shot.dialogue?.trim() && <p className="prompt-dialogue">
         台词：<AssetMention reference={character} active={sameReference(activeReference, character)} onSelect={onSelectReference} />（迟疑，低声）：“{shot.dialogue}”
       </p>}
       <div className="prompt-references">
         <span>引用资产</span>
         {references.map((reference) => (
-          <Badge key={`${reference.kind}-${reference.name}`} tone="active">{ASSET_KIND_LABELS[reference.kind]}</Badge>
+          <Badge key={`${reference.type}-${reference.name}`} tone="active">{ASSET_TYPE_LABELS[reference.type]}</Badge>
         ))}
       </div>
       <p className="prompt-selection">为“{activeReference.name}”选择素材候选</p>
@@ -66,7 +66,7 @@ function AssetMention({ reference, active, onSelect }: { reference: PromptRefere
 export const getPromptReferences = getShotPromptReferences
 
 function sameReference(a: PromptReference, b: PromptReference): boolean {
-  return a.name === b.name && a.kind === b.kind
+  return a.name === b.name && a.type === b.type
 }
 
 /** 动作字段常含角色名前缀与句末标点；拼进 Prompt 时只保留一句一句号。 */

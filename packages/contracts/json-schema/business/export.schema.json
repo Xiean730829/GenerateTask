@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.auto-drama-studio.local/business/export.schema.json",
   "title": "Export 导出",
-  "description": "最终交付对象，由 Timeline 经 export.compose 任务（ffmpeg 合成）导出为 MP4，文件本体存 MinIO，此处仅保存元数据。",
+  "description": "最终交付对象，由 Timeline 经 export.compose 任务（ffmpeg 合成）导出为 MP4，文件本体存对象存储（阿里云 OSS），此处仅保存元数据。",
   "type": "object",
   "additionalProperties": false,
   "required": ["id", "timelineId", "status", "createdAt"],
@@ -28,7 +28,7 @@
       "enum": ["pending", "queued", "running", "succeeded", "failed", "canceled"]
     },
     "fileUrl": {
-      "description": "成片访问地址。仅当 status 为 succeeded 时提供（MinIO 签名 URL）。",
+      "description": "成片访问地址。仅当 status 为 succeeded 时提供（对象存储 OSS 签名 URL）。",
       "type": ["string", "null"],
       "format": "uri"
     },

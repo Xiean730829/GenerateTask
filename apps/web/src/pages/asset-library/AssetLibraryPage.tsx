@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { api } from '@/api'
-import type { Asset, AssetKind } from '@/api'
-import { ASSET_KIND_LABELS, ASSET_KIND_TABS } from '@/features/asset/asset-labels'
+import type { Asset, AssetType } from '@/api'
+import { getVoiceAttributes } from '@/api/types/asset'
+import { ASSET_TYPE_LABELS, ASSET_TYPE_TABS } from '@/features/asset/asset-labels'
 import { errText } from '@/stores/workspace-store'
 
 /** 项目级资产库入口；按角色 / 道具 / 场景 / 风格分类浏览用户级素材。 */
@@ -11,7 +12,7 @@ export function AssetLibraryPage() {
   const [assets, setAssets] = useState<Asset[]>([])
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState<string | null>(null)
-  const [activeKind, setActiveKind] = useState<AssetKind>('character')
+  const [activeType, setActiveType] = useState<AssetType>('character')
 
   useEffect(() => {
     api.assets
@@ -27,14 +28,14 @@ export function AssetLibraryPage() {
   }, [])
 
   const counts = useMemo(() => {
-    const map = Object.fromEntries(ASSET_KIND_TABS.map((kind) => [kind, 0])) as Record<AssetKind, number>
-    for (const asset of assets) map[asset.kind] += 1
+    const map = Object.fromEntries(ASSET_TYPE_TABS.map((type) => [type, 0])) as Record<AssetType, number>
+    for (const asset of assets) map[asset.type] += 1
     return map
   }, [assets])
 
   const filtered = useMemo(
-    () => assets.filter((asset) => asset.kind === activeKind),
-    [assets, activeKind],
+    () => assets.filter((asset) => asset.type === activeType),
+    [assets, activeType],
   )
 
   return (
@@ -50,17 +51,17 @@ export function AssetLibraryPage() {
       {state === 'ready' && (
         <>
           <div className="asset-library-tabs" role="tablist" aria-label="资产分类">
-            {ASSET_KIND_TABS.map((kind) => (
+            {ASSET_TYPE_TABS.map((type) => (
               <button
-                key={kind}
+                key={type}
                 type="button"
                 role="tab"
-                aria-selected={activeKind === kind}
-                className={activeKind === kind ? 'is-active' : ''}
-                onClick={() => setActiveKind(kind)}
+                aria-selected={activeType === type}
+                className={activeType === type ? 'is-active' : ''}
+                onClick={() => setActiveType(type)}
               >
-                {ASSET_KIND_LABELS[kind]}
-                <span className="asset-library-tab-count">{counts[kind]}</span>
+                {ASSET_TYPE_LABELS[type]}
+                <span className="asset-library-tab-count">{counts[type]}</span>
               </button>
             ))}
           </div>
@@ -73,27 +74,30 @@ export function AssetLibraryPage() {
 
           {assets.length > 0 && filtered.length === 0 && (
             <div className="card empty-state">
-              <p>当前分类下暂无{ASSET_KIND_LABELS[activeKind]}素材。</p>
+              <p>当前分类下暂无{ASSET_TYPE_LABELS[activeType]}素材。</p>
             </div>
           )}
 
           {filtered.length > 0 && (
             <div className="asset-library-grid" role="tabpanel">
-              {filtered.map((asset) => (
-                <article key={asset.id} className="card stack asset-library-card">
-                  {asset.selectedImageUrl ? (
-                    <img className="material-preview" src={asset.selectedImageUrl} alt={asset.name} />
-                  ) : (
-                    <div className="asset-library-placeholder" aria-hidden />
-                  )}
-                  <strong>{asset.name}</strong>
-                  <span className="muted">{ASSET_KIND_LABELS[asset.kind]} · v{asset.version}</span>
-                  {asset.description && <p className="muted asset-library-desc">{asset.description}</p>}
-                  {asset.kind === 'character' && (
-                    <p className="muted" style={{ fontSize: '0.8125rem' }}>音色：{asset.voice.preset}</p>
-                  )}
-                </article>
-              ))}
+              {filtered.map((asset) => {
+                const voice = getVoiceAttributes(asset)
+                return (
+                  <article key={asset.id} className="card stack asset-library-card">
+                    {asset.referenceImageUrl ? (
+                      <img className="material-preview" src={asset.referenceImageUrl} alt={asset.name} />
+                    ) : (
+                      <div className="asset-library-placeholder" aria-hidden />
+                    )}
+                    <strong>{asset.name}</strong>
+                    <span className="muted">{ASSET_TYPE_LABELS[asset.type]}</span>
+                    {asset.description && <p className="muted asset-library-desc">{asset.description}</p>}
+                    {asset.type === 'character' && voice && (
+                      <p className="muted" style={{ fontSize: '0.8125rem' }}>音色：{voice.preset}</p>
+                    )}
+                  </article>
+                )
+              })}
             </div>
           )}
         </>

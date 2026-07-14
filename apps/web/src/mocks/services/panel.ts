@@ -2,7 +2,7 @@ import type { PanelService } from '@/api/contracts'
 import type { PanelVideo } from '@/api/types'
 import { backend } from '@/mocks/backend'
 import { assembleGreedy } from '@/mocks/backend/assembly'
-import { clone, nowIso } from '@/mocks/backend/util'
+import { clone, mockId, nowIso } from '@/mocks/backend/util'
 
 export const mockPanelService: PanelService = {
   async listByEpisode(episodeId) {
@@ -11,27 +11,30 @@ export const mockPanelService: PanelService = {
 
   async assemble(episodeId) {
     const state = backend.db.getEpisodeState(episodeId)
-    // 后端贪心组装：读取视频 API 最大时长上限，保持 Shot 原顺序。前端不参与分组。
-    const panels = assembleGreedy(
+    const { panels, revisions } = assembleGreedy(
       episodeId,
       state.shots,
       state.keyframes,
-      backend.db.videoCapability.maxClipDurationSec,
+      backend.db.videoCapability.maxPanelDurationSeconds,
     )
     state.panels = panels
-    // 组装（或重新组装）后重置视频状态为“未生成”。
+    state.panelRevisions = revisions
     const ts = nowIso()
-    state.panelVideos = panels.map<PanelVideo>((p) => ({
-      panelId: p.id,
-      status: 'none',
-      freshness: 'fresh',
-      videoUrl: null,
-      taskId: null,
-      updatedAt: ts,
-    }))
-    // 组装变更使既有 Timeline 失效。
+    state.panelVideos = panels.flatMap<PanelVideo>((panel) => {
+      if (!panel.currentRevisionId) return []
+      return [{
+        id: mockId('pvid'),
+        panelId: panel.id,
+        panelRevisionId: panel.currentRevisionId,
+        status: 'pending',
+        taskId: null,
+        mediaFileId: null,
+        createdAt: ts,
+        videoUrl: null,
+      }]
+    })
     if (state.timeline) {
-      state.timeline.freshness = 'stale'
+      state.timeline.status = 'stale'
       state.timeline.updatedAt = ts
     }
     return clone(panels)

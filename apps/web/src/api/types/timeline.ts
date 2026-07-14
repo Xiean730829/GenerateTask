@@ -1,34 +1,37 @@
-import type { Freshness, Id, IsoDateTime } from './common'
+import type { Id, IsoDateTime } from './common'
 
-/** 时间线上的一段 Panel 视频轨。 */
-export interface TimelineClip {
+/** MS1 最小视频轨元素。 */
+export interface TimelineVideoClip {
   panelId: Id
-  order: number
-  videoUrl: string | null
-  durationSec: number
+  orderIndex: number
+  mediaFileId: Id | null
+  durationSeconds: number
+  videoUrl?: string | null
 }
 
-/** 字幕条目。 */
-export interface SubtitleCue {
-  startSec: number
-  endSec: number
+export interface TimelineAudioClip {
+  mediaFileId: Id | null
+  audioUrl?: string | null
+}
+
+export interface TimelineSubtitleCue {
+  startSeconds: number
+  endSeconds: number
   text: string
 }
 
-/**
- * Timeline：只读交付预览区，展示 Panel 顺序、音频轨与字幕轨。
- * 内容修改必须回到 Shot 或 Panel 后重新合成。
- */
+/** 时间线，与 timeline.schema.json 对齐。 */
 export interface Timeline {
   id: Id
   episodeId: Id
-  clips: TimelineClip[]
-  /** 音频轨预览地址。 */
-  audioUrl: string | null
-  subtitles: SubtitleCue[]
-  totalDurationSec: number
-  freshness: Freshness
-  taskId: Id | null
+  status: string
+  videoTrack: TimelineVideoClip[]
+  audioTrack: TimelineAudioClip[]
+  subtitleTrack: TimelineSubtitleCue[]
   createdAt: IsoDateTime
   updatedAt: IsoDateTime
+}
+
+export function isTimelineFresh(timeline: Timeline | null): boolean {
+  return !!timeline && timeline.status !== 'stale'
 }

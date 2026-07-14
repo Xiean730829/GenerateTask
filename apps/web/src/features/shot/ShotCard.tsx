@@ -34,35 +34,35 @@ export function ShotCard({ shot, editable }: { shot: Shot; editable: boolean }) 
   return (
     <div className="card stack">
       <div className="row" style={{ justifyContent: 'space-between' }}>
-        <strong>镜头 {shot.order}</strong>
-        <span className="muted" style={{ fontSize: '0.8rem' }}>时长 {value.durationSec}s</span>
+        <strong>镜头 {shot.orderIndex + 1}</strong>
+        <span className="muted" style={{ fontSize: '0.8rem' }}>时长 {value.durationSeconds ?? 0}s</span>
       </div>
       <div className="grid-2">
         <label className="stack" style={{ gap: '0.25rem' }}>
           <span className="muted" style={{ fontSize: '0.78rem' }}>时长（秒）</span>
-          <input type="number" min={1} disabled={!editable} value={value.durationSec}
-            onChange={(e) => set({ durationSec: Number(e.target.value) || 1 })} />
+          <input type="number" min={1} disabled={!editable} value={value.durationSeconds ?? ''}
+            onChange={(e) => set({ durationSeconds: Number(e.target.value) || 1 })} />
         </label>
         <label className="stack" style={{ gap: '0.25rem' }}>
           <span className="muted" style={{ fontSize: '0.78rem' }}>景别</span>
-          <select disabled={!editable} value={value.size} onChange={(e) => set({ size: e.target.value as Shot['size'] })}>
+          <select disabled={!editable} value={value.shotSize ?? ''} onChange={(e) => set({ shotSize: e.target.value })}>
             {Object.entries(SHOT_SIZE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </label>
         <label className="stack" style={{ gap: '0.25rem' }}>
           <span className="muted" style={{ fontSize: '0.78rem' }}>运镜</span>
-          <select disabled={!editable} value={value.movement} onChange={(e) => set({ movement: e.target.value as Shot['movement'] })}>
+          <select disabled={!editable} value={value.cameraMovement ?? ''} onChange={(e) => set({ cameraMovement: e.target.value })}>
             {Object.entries(MOVEMENT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </label>
       </div>
       <label className="stack" style={{ gap: '0.25rem' }}>
         <span className="muted" style={{ fontSize: '0.78rem' }}>动作</span>
-        <textarea rows={2} disabled={!editable} value={value.action} onChange={(e) => set({ action: e.target.value })} />
+        <textarea rows={2} disabled={!editable} value={value.action ?? ''} onChange={(e) => set({ action: e.target.value })} />
       </label>
       <label className="stack" style={{ gap: '0.25rem' }}>
         <span className="muted" style={{ fontSize: '0.78rem' }}>台词</span>
-        <textarea rows={2} disabled={!editable} value={value.dialogue} onChange={(e) => set({ dialogue: e.target.value })} />
+        <textarea rows={2} disabled={!editable} value={value.dialogue ?? ''} onChange={(e) => set({ dialogue: e.target.value })} />
       </label>
       {editable && dirty && (
         <div className="row">

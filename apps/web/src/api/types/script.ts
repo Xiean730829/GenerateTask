@@ -1,20 +1,18 @@
 import type { Id, IsoDateTime } from './common'
 
-/** 剧本状态：生成中 / 可编辑 / 已确认。 */
-export type ScriptStatus = 'generating' | 'ready' | 'confirmed'
+export type ScriptStatus = 'draft' | 'confirmed'
 
-/**
- * Script 由剧本任务产出，成功后停在可编辑结果。
- * 用户确认后才允许创建镜头任务。
- */
+/** 剧本，与 script.schema.json 对齐。生成中状态由 script.generate Task 表达。 */
 export interface Script {
   id: Id
   episodeId: Id
+  title: string | null
+  logline: string | null
+  content: string | null
+  scenes: Record<string, unknown>[]
+  version: number
   status: ScriptStatus
-  /** 剧本正文（可编辑）。 */
-  content: string
-  /** 关联的生成任务 id，用于就地展示状态。 */
-  taskId: Id | null
+  confirmedAt: IsoDateTime | null
   createdAt: IsoDateTime
   updatedAt: IsoDateTime
 }

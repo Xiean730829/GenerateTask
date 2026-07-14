@@ -4,11 +4,6 @@ import { isTerminalStatus } from '@/api'
 import { Store } from './create-store'
 import { initialWorkspaceState, type WorkspaceState } from './workspace-types'
 
-/**
- * Episode 工作台业务状态。
- * - 通过业务 SDK（api）读写后端，绝不裸调 HTTP / WS。
- * - 订阅 Episode 任务事件，按 taskId 就地更新对象；终态成功后拉取对应业务对象校正。
- */
 export class WorkspaceStore extends Store<WorkspaceState> {
   private unsubEvents: (() => void) | null = null
   private unsubConn: (() => void) | null = null
@@ -17,7 +12,6 @@ export class WorkspaceStore extends Store<WorkspaceState> {
     super({ ...initialWorkspaceState })
   }
 
-  /** 加载全部数据并建立任务事件订阅。 */
   async init(): Promise<void> {
     this.set({ load: 'loading', error: null })
     try {
@@ -40,23 +34,19 @@ export class WorkspaceStore extends Store<WorkspaceState> {
   }
 
   private subscribeEvents(): void {
-    this.unsubEvents = api.taskEvents.subscribe(this.episodeId, (ev) =>
-      this.onTaskEvent(ev),
-    )
+    this.unsubEvents = api.taskEvents.subscribe(this.episodeId, (ev) => this.onTaskEvent(ev))
     this.unsubConn = api.taskEvents.onConnectionChange(this.episodeId, (state) => {
       this.set({ connection: state })
-      // 连接建立 / 重连后，用任务查询接口校正，避免丢包导致状态漂移。
       if (state === 'open') void this.reconcileTasks()
     })
   }
 
   private onTaskEvent(ev: TaskUpdatedEvent): void {
     const task = ev.data
-    this.set((prev) => ({ tasks: { ...prev.tasks, [task.taskId]: task } }))
+    this.set((prev) => ({ tasks: { ...prev.tasks, [task.id]: task } }))
     if (isTerminalStatus(task.status)) void this.onTaskTerminal(task)
   }
 
-  /** 终态任务：拉取其影响的业务对象，使 UI 反映最终结果。 */
   private async onTaskTerminal(task: GenerationTask): Promise<void> {
     await this.refreshForTaskType(task.taskType)
   }
@@ -65,7 +55,7 @@ export class WorkspaceStore extends Store<WorkspaceState> {
     try {
       const tasks = await api.tasks.listByEpisode(this.episodeId)
       const map: Record<Id, GenerationTask> = {}
-      for (const t of tasks) map[t.taskId] = t
+      for (const t of tasks) map[t.id] = t
       this.set({ tasks: map })
     } catch {
       // 校正失败不阻塞 UI。
@@ -85,19 +75,20 @@ export class WorkspaceStore extends Store<WorkspaceState> {
         return this.refreshAssets()
       case 'keyframe.generate':
         return this.refreshKeyframes()
-      case 'panel.assemble':
-        await this.refreshPanels()
+      case 'video.generate':
         return this.refreshPanelVideos()
-      case 'panel-video.generate':
-        return this.refreshPanelVideos()
-      case 'timeline.compose':
-        return this.refreshTimeline()
-      case 'export.render':
+      case 'audio.subtitle':
+        await this.finalizeTimelineCompose()
+        return
+      case 'export.compose':
         return this.refreshExport()
     }
   }
 
-  // ---- 数据刷新（每个 slice 独立，供事件回调与 action 复用）----
+  private async finalizeTimelineCompose(): Promise<void> {
+    const timeline = await api.timelines.compose(this.episodeId)
+    this.set({ timeline })
+  }
 
   private async refreshAll(): Promise<void> {
     const [capability] = await Promise.all([
@@ -124,7 +115,21 @@ export class WorkspaceStore extends Store<WorkspaceState> {
   }
 
   private async refreshShots(): Promise<void> {
-    this.set({ shots: await api.shots.listByEpisode(this.episodeId) })
+    const shots = await api.shots.listByEpisode(this.episodeId)
+    this.set({ shots })
+    await this.refreshShotAssets()
+  }
+
+  private async refreshShotAssets(): Promise<void> {
+    const shots = this.getState().shots
+    if (shots.length === 0) {
+      this.set({ shotAssets: {} })
+      return
+    }
+    const entries = await Promise.all(
+      shots.map(async (shot) => [shot.id, await api.assets.listForShot(shot.id)] as const),
+    )
+    this.set({ shotAssets: Object.fromEntries(entries) })
   }
 
   private async refreshAssets(): Promise<void> {
@@ -149,10 +154,8 @@ export class WorkspaceStore extends Store<WorkspaceState> {
   }
 
   private async refreshExport(): Promise<void> {
-    this.set({ exportJob: await api.exports.getByEpisode(this.episodeId) })
+    this.set({ exportRecord: await api.exports.getByEpisode(this.episodeId) })
   }
-
-  // ---- 用户动作：均通过业务 SDK，任务进度由事件驱动回流 ----
 
   saveSourceMaterial = async (text: string): Promise<void> => {
     const sm = this.getState().sourceMaterial
@@ -171,12 +174,11 @@ export class WorkspaceStore extends Store<WorkspaceState> {
     if (!script) return
     const { taskId } = await api.scripts.confirmAndGenerateShots(script.id)
     await this.refreshScript()
-    // 立即登记镜头任务，避免切到镜头阶段后等待 WS 首包前出现空白。
     try {
       const task = await api.tasks.get(taskId)
       this.set((prev) => ({ tasks: { ...prev.tasks, [taskId]: task } }))
     } catch {
-      // 任务查询失败时仍依赖事件回流。
+      // 依赖事件回流。
     }
   }
 
@@ -187,7 +189,7 @@ export class WorkspaceStore extends Store<WorkspaceState> {
 
   prepareShotMaterials = async (shotId: Id): Promise<void> => {
     await api.assets.prepareForShot(shotId)
-    await this.refreshAssets()
+    await Promise.all([this.refreshAssets(), this.refreshShotAssets()])
   }
 
   getShotMaterials = (shotId: Id) => api.assets.listForShot(shotId)
@@ -218,27 +220,24 @@ export class WorkspaceStore extends Store<WorkspaceState> {
     await this.refreshAssets()
   }
 
-  updateAsset = async (
-    id: Id,
-    input: Parameters<typeof api.assets.update>[1],
-  ): Promise<void> => {
+  updateAsset = async (id: Id, input: Parameters<typeof api.assets.update>[1]): Promise<void> => {
     await api.assets.update(id, input)
     await this.refreshAssets()
   }
 
   confirmAssetDefinition = async (assetId: Id): Promise<void> => {
-    await api.assets.confirmDefinition(assetId)
-    await this.refreshAssets()
+    await api.assets.createRevision(assetId)
+    await Promise.all([this.refreshAssets(), this.refreshShotAssets()])
   }
 
   generateAssetImage = async (assetId: Id): Promise<void> => {
-    await api.assets.generateImage(assetId)
-    await this.refreshAssets()
+    await api.assets.generateReferenceImage(assetId)
+    await Promise.all([this.refreshAssets(), this.refreshShotAssets()])
   }
 
-  confirmAssetImage = async (assetId: Id, imageUrl: string): Promise<void> => {
-    await api.assets.confirmImage(assetId, imageUrl)
-    await this.refreshAssets()
+  confirmAssetImage = async (assetId: Id, mediaFileId: Id): Promise<void> => {
+    await api.assets.confirmReferenceImage(assetId, mediaFileId)
+    await Promise.all([this.refreshAssets(), this.refreshShotAssets()])
   }
 
   generateNextKeyframeBatch = async (): Promise<void> => {
@@ -251,8 +250,8 @@ export class WorkspaceStore extends Store<WorkspaceState> {
     await this.refreshKeyframes()
   }
 
-  selectKeyframe = async (shotId: Id, keyframeId: Id): Promise<void> => {
-    await api.keyframes.select(shotId, keyframeId)
+  selectKeyframe = async (_shotId: Id, keyframeId: Id): Promise<void> => {
+    await api.keyframes.select(keyframeId)
     await Promise.all([this.refreshKeyframes(), this.refreshPanelVideos(), this.refreshTimeline()])
   }
 
@@ -272,16 +271,16 @@ export class WorkspaceStore extends Store<WorkspaceState> {
   }
 
   composeTimeline = async (): Promise<void> => {
-    await api.timelines.compose(this.episodeId)
-    await this.refreshTimeline()
+    const { taskId } = await api.timelines.generateAudioSubtitle(this.episodeId)
+    try {
+      const task = await api.tasks.get(taskId)
+      this.set((prev) => ({ tasks: { ...prev.tasks, [taskId]: task } }))
+    } catch {
+      // 依赖事件回流。
+    }
   }
 
-  estimateExport = (options: Parameters<typeof api.exports.estimate>[1]) =>
-    api.exports.estimate(this.episodeId, options)
-
-  createExport = async (
-    options: Parameters<typeof api.exports.create>[1],
-  ): Promise<void> => {
+  createExport = async (options: Parameters<typeof api.exports.create>[1]): Promise<void> => {
     await api.exports.create(this.episodeId, options)
     await this.refreshExport()
   }

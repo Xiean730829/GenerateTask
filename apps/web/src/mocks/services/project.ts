@@ -1,15 +1,9 @@
 import type { ProjectService } from '@/api/contracts'
-import type {
-  CreateProjectInput,
-  CreateProjectResult,
-  Episode,
-  Project,
-  Script,
-  SourceMaterial,
-} from '@/api/types'
+import type { CreateProjectResult, Episode, Project, Script, SourceMaterial } from '@/api/types'
 import { backend } from '@/mocks/backend'
 import { generateScriptContent } from '@/mocks/backend/content'
 import { clone, mockId, nowIso } from '@/mocks/backend/util'
+import { deriveProjectCover } from './project-cover'
 import { deriveStageLabel } from './stage-label'
 
 export const mockProjectService: ProjectService = {
@@ -24,6 +18,7 @@ export const mockProjectService: ProjectService = {
         defaultEpisodeId: project.defaultEpisodeId,
         updatedAt: project.updatedAt,
         stageLabel: deriveStageLabel(state),
+        coverUrl: deriveProjectCover(project, state),
       }
     })
   },
@@ -32,42 +27,55 @@ export const mockProjectService: ProjectService = {
     return clone(backend.db.getProject(projectId))
   },
 
-  async create(input: CreateProjectInput): Promise<CreateProjectResult> {
+  async create(input): Promise<CreateProjectResult> {
     const ts = nowIso()
     const projectId = mockId('proj')
     const episodeId = mockId('ep')
+    const ownerUserId = 'demo-user'
 
     const episode: Episode = {
       id: episodeId,
       projectId,
       title: '第 1 集',
+      synopsis: null,
+      orderIndex: 0,
+      targetDurationSeconds: input.targetDurationSeconds,
+      status: 'active',
       createdAt: ts,
       updatedAt: ts,
     }
     const project: Project = {
       id: projectId,
+      ownerUserId,
       name: input.name,
-      targetDurationSec: input.targetDurationSec,
+      projectType: 'single_episode',
+      stage: 'script',
+      targetDurationSeconds: input.targetDurationSeconds,
       aspectRatio: input.aspectRatio,
-      visualStyle: input.visualStyle,
+      style: input.style,
       defaultEpisodeId: episodeId,
       createdAt: ts,
       updatedAt: ts,
     }
     const sourceMaterial: SourceMaterial = {
       id: mockId('src'),
-      episodeId,
-      kind: 'text',
+      projectId,
+      type: 'text',
       text: input.sourceText,
+      title: null,
+      status: 'ready',
       createdAt: ts,
-      updatedAt: ts,
     }
     const script: Script = {
       id: mockId('script'),
       episodeId,
-      status: 'generating',
+      title: null,
+      logline: null,
       content: '',
-      taskId: null,
+      scenes: [],
+      version: 1,
+      status: 'draft',
+      confirmedAt: null,
       createdAt: ts,
       updatedAt: ts,
     }
@@ -79,35 +87,34 @@ export const mockProjectService: ProjectService = {
       script,
       shots: [],
       keyframes: [],
+      shotAssetOverrides: [],
       panels: [],
+      panelRevisions: [],
       panelVideos: [],
       timeline: null,
-      exportJob: null,
+      exportRecord: null,
       failedOnce: new Set(),
     })
     backend.db.touchRecent(projectId)
 
-    // 创建剧本生成任务；成功后写入剧本正文并置为 ready。
     const task = backend.engine.start({
       episodeId,
       taskType: 'script.generate',
       onSucceed: () => {
         const state = backend.db.getEpisodeState(episodeId)
         if (state.script) {
-          state.script.content = generateScriptContent(sourceMaterial.text)
-          state.script.status = 'ready'
+          state.script.content = generateScriptContent(sourceMaterial.text ?? '')
           state.script.updatedAt = nowIso()
         }
         return { scriptId: state.script?.id ?? null }
       },
     })
-    script.taskId = task.taskId
 
     return {
       project: clone(project),
-      episodeId,
-      sourceMaterialId: sourceMaterial.id,
-      scriptTaskId: task.taskId,
+      defaultEpisode: clone(episode),
+      sourceMaterial: clone(sourceMaterial),
+      scriptTaskId: task.id,
     }
   },
 }

@@ -16,17 +16,27 @@ servers:
 channels:
   taskExecution:
     address: drama.task.execute
-    description: Queue receiving task execution messages after a publisher confirm from the drama.tasks topic exchange.
+    description: >-
+      Queue receiving task execution messages after a publisher confirm from the drama.tasks topic exchange.
+      消费方 ACK/NACK 规则见 x-consumer-ack-policy；不可恢复消息进入死信队列 drama.task.dlq。
     x-rabbitmq:
       exchange: drama.tasks
       routingKey: task.execute
       deadLetterQueue: drama.task.dlq
+    x-consumer-ack-policy:
+      onBusinessSucceeded: ACK —— 回写 succeeded 后确认。
+      onBusinessFailed: ACK —— 已回写 failed（失败已记录），消息可删除。
+      onUnrecoverableMessage: NACK(requeue=false) → DLQ —— 消息格式错误 / 不可恢复。
+      onTransientError: NACK(requeue=true) —— 网络异常 / 连接断开，重回队列重试。
     messages:
       taskExecution:
         $ref: '#/components/messages/TaskExecution'
   episodeTaskUpdates:
     address: /api/ws/episodes/{episodeId}
-    description: Java sends `task.updated` complete task snapshots for one Episode to the React workstation.
+    description: >-
+      Java sends `task.updated` complete task snapshots for one Episode to the React workstation.
+      触发时机：handleCallback() 更新数据库后，通过 ApplicationEventPublisher.publishEvent(TaskUpdatedEvent) 推送。
+      断线重连后客户端用 GET /api/tasks/{taskId} 校正完整字段（WS 事件为精简快照，REST 为完整字段）。
     parameters:
       episodeId:
         description: The Episode whose GenerationTask updates are streamed.

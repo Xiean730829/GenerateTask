@@ -6,7 +6,38 @@
   "attempt": 0,
   "progress": 100,
   "result": {
-    "scriptId": "66666666-6666-4666-8666-666666666666"
+    "schemaVersion": "1.0",
+    "script": {
+      "id": "66666666-6666-4666-8666-666666666666",
+      "episodeId": "44444444-4444-4444-8444-444444444444",
+      "title": "雨夜密信",
+      "logline": "失忆将军在雨夜发现敌军密信，被迫在信任与背叛间抉择。",
+      "content": "场景一 · 雨夜军帐\n将军：这封信……为何有我的字迹？\n副将：将军，城外敌军已至。\n……（完整剧本正文）……",
+      "scenes": [
+        { "index": 0, "heading": "雨夜军帐", "summary": "将军发现密信" },
+        { "index": 1, "heading": "城墙之上", "summary": "识破内应" }
+      ],
+      "version": 1,
+      "status": "draft",
+      "confirmedAt": null,
+      "createdAt": "2026-07-12T12:01:30Z",
+      "updatedAt": "2026-07-12T12:01:30Z"
+    },
+    "storyBible": {
+      "characters": [{ "name": "将军", "traits": "沉稳、失忆" }],
+      "style": "古风悬疑",
+      "tone": "紧张、克制"
+    },
+    "quality": {
+      "passed": true,
+      "issues": []
+    },
+    "rewriteCount": 0,
+    "promptVersions": {
+      "expander": "v1",
+      "qualityChecker": "v1",
+      "rewriter": "v1"
+    }
   },
   "worker": {
     "name": "script-worker",

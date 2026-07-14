@@ -25,10 +25,6 @@ const TONES: Record<TaskStatus, BadgeTone> = {
   canceled: 'pending',
 }
 
-/**
- * 就地任务状态：状态徽标、进度、错误摘要与可用操作（取消 / 重试）。
- * 可重试性以服务端 error.retryable 为准；仅 pending / queued 可取消。
- */
 export function TaskStatusInline({ task }: { task: GenerationTask | undefined }) {
   const store = useWorkspaceStore()
   if (!task) return null
@@ -41,21 +37,21 @@ export function TaskStatusInline({ task }: { task: GenerationTask | undefined })
         <Badge tone={TONES[task.status]}>{LABELS[task.status]}</Badge>
         {running && <span className="muted" style={{ fontSize: '0.8rem' }}>{task.progress}%</span>}
         {isCancelable(task.status) && (
-          <Button size="sm" variant="ghost" onClick={() => void store.cancelTask(task.taskId)}>
+          <Button size="sm" variant="ghost" onClick={() => void store.cancelTask(task.id)}>
             取消
           </Button>
         )}
-        {task.status === 'failed' && task.error?.retryable && (
-          <Button size="sm" onClick={() => void store.retryTask(task.taskId)}>
+        {task.status === 'failed' && task.retryable && (
+          <Button size="sm" onClick={() => void store.retryTask(task.id)}>
             重试
           </Button>
         )}
       </div>
       {running && <ProgressBar value={task.progress} />}
-      {task.status === 'failed' && task.error && (
+      {task.status === 'failed' && task.errorMessage && (
         <div className="inline-error">
-          [{task.error.code}] {task.error.message}
-          {!task.error.retryable && <span className="muted">（该错误不可重试）</span>}
+          [{task.errorCode}] {task.errorMessage}
+          {!task.retryable && <span className="muted">（该错误不可重试）</span>}
         </div>
       )}
     </div>

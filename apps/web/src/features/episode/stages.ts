@@ -1,4 +1,7 @@
-import type { StageKey, StageStatus } from '@/api'
+import type { StageKey } from '@/api'
+import { groupKeyframesByShot } from '@/api/types/keyframe'
+import { isPanelVideoReady } from '@/api/types/panel'
+import { isTimelineFresh } from '@/api/types/timeline'
 import type { WorkspaceState } from '@/stores/workspace-types'
 
 export interface StageDescriptor {
@@ -6,7 +9,6 @@ export interface StageDescriptor {
   label: string
 }
 
-/** 顶部常驻阶段导航顺序。 */
 export const STAGES: StageDescriptor[] = [
   { key: 'input', label: '输入' },
   { key: 'script', label: '剧本' },
@@ -16,7 +18,6 @@ export const STAGES: StageDescriptor[] = [
   { key: 'export', label: '导出' },
 ]
 
-/** 某阶段是否满足进入前置条件（不允许跳过前置启动后续阶段）。 */
 export function isStageUnlocked(s: WorkspaceState, key: StageKey): boolean {
   switch (key) {
     case 'input':
@@ -27,15 +28,16 @@ export function isStageUnlocked(s: WorkspaceState, key: StageKey): boolean {
     case 'panel':
       return allShotsHaveSelectedKeyframe(s)
     case 'timeline':
-      return s.panelVideos.length > 0 && s.panelVideos.every((v) => v.status === 'ready')
+      return s.panelVideos.length > 0 && s.panelVideos.every(isPanelVideoReady)
     case 'export':
-      return !!s.timeline && s.timeline.freshness === 'fresh'
+      return isTimelineFresh(s.timeline)
   }
 }
 
 export function allShotsHaveSelectedKeyframe(s: WorkspaceState): boolean {
   if (s.shots.length === 0) return false
+  const grouped = groupKeyframesByShot(s.keyframes)
   return s.shots.every((shot) =>
-    s.keyframes.some((k) => k.shotId === shot.id && k.selectedKeyframeId),
+    grouped.some((k) => k.shotId === shot.id && k.selectedKeyframeId),
   )
 }

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { isPanelVideoReady } from '@/api/types/panel'
 import { Button } from '@/components/ui/Button'
 import { HorizontalScroll } from '@/components/ui/HorizontalScroll'
 import { StageHeader } from '@/features/episode/StageHeader'
@@ -37,8 +38,8 @@ export function PanelStage({ onNext }: { onNext: () => void }) {
     void store.assemblePanels().finally(() => setAssembling(false))
   }, [needsAssembly, store])
 
-  const pending = state.panelVideos.filter((video) => ['none', 'failed', 'stale'].includes(video.status)).length
-  const allReady = state.panelVideos.length > 0 && state.panelVideos.every((video) => video.status === 'ready')
+  const pending = state.panelVideos.filter((video) => video.status === 'pending' || video.status === 'failed' || video.status === 'stale').length
+  const allReady = state.panelVideos.length > 0 && state.panelVideos.every(isPanelVideoReady)
   const batch = async () => {
     setBusy(true)
     try { await store.generateAllPanelVideos() } finally { setBusy(false) }
@@ -80,7 +81,7 @@ export function PanelStage({ onNext }: { onNext: () => void }) {
             panel={selectedPanel}
             shots={state.shots}
             keyframes={state.keyframes}
-            visualStyle={state.project?.visualStyle}
+            visualStyle={state.project?.style}
           />
         )}
       </>}

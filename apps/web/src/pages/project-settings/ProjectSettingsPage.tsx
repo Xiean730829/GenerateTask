@@ -47,11 +47,11 @@ export function ProjectSettingsPage() {
           </div>
           <div>
             <dt>目标时长</dt>
-            <dd>{project.targetDurationSec} 秒</dd>
+            <dd>{project.targetDurationSeconds ?? '未设置'} 秒</dd>
           </div>
           <div>
             <dt>视觉风格</dt>
-            <dd>{project.visualStyle ?? '未设置'}</dd>
+            <dd>{project.style ?? '未设置'}</dd>
           </div>
         </dl>
       )}

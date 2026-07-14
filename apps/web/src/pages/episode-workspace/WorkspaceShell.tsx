@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { StageKey } from '@/api'
+import { isPanelVideoReady } from '@/api/types/panel'
 import { useWorkspaceState } from '@/stores/workspace-context'
 import { StageNav } from '@/features/episode/StageNav'
 import { TimelineBar } from '@/features/timeline/TimelineBar'
@@ -26,7 +27,7 @@ export function WorkspaceShell() {
     return <div className="workspace-body inline-error">加载失败：{state.error}</div>
   }
 
-  const showTimelineBar = state.panelVideos.some((v) => v.status === 'ready') || !!state.timeline
+  const showTimelineBar = state.panelVideos.some(isPanelVideoReady) || !!state.timeline
 
   return (
     <>

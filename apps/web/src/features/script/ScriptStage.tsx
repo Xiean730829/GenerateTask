@@ -3,22 +3,22 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { TaskStatusInline } from '@/components/feedback/TaskStatusInline'
 import { StageHeader } from '@/features/episode/StageHeader'
-import { useTask } from '@/hooks/useTask'
+import { useLatestTaskByType } from '@/hooks/useLatestTaskByType'
 import { useWorkspaceSelector, useWorkspaceStore } from '@/stores/workspace-context'
 
 /** 剧本阶段：就地展示生成状态，成功后可编辑；确认后才创建镜头任务。 */
 export function ScriptStage({ onNext }: { onNext: () => void }) {
   const store = useWorkspaceStore()
   const script = useWorkspaceSelector((s) => s.script)
-  const task = useTask(script?.taskId)
+  const task = useLatestTaskByType('script.generate')
   const [content, setContent] = useState('')
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    if (script && script.status !== 'generating') setContent(script.content)
-  }, [script?.id, script?.status, script?.updatedAt])
+    if (script && script.content) setContent(script.content)
+  }, [script?.id, script?.status, script?.updatedAt, script?.content])
 
-  const generating = script?.status === 'generating' || task?.status === 'running'
+  const generating = task && ['pending', 'queued', 'running', 'retrying'].includes(task.status)
   const confirmed = script?.status === 'confirmed'
   const dirty = script ? content !== script.content : false
 

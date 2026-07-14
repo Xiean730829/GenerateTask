@@ -1,4 +1,6 @@
 import type { Id } from '@/api'
+import { isPanelVideoReady } from '@/api/types/panel'
+import { isTimelineFresh } from '@/api/types/timeline'
 import type { WorkspaceState } from '@/stores/workspace-types'
 
 /**
@@ -13,10 +15,10 @@ export function shotDownstreamImpact(s: WorkspaceState, shotId: Id): {
     s.panels.filter((p) => p.shotIds.includes(shotId)).map((p) => p.id),
   )
   const affectedPanelVideos = s.panelVideos.filter(
-    (v) => panelIds.has(v.panelId) && v.status === 'ready',
+    (v) => panelIds.has(v.panelId) && isPanelVideoReady(v),
   ).length
   return {
     affectedPanelVideos,
-    timelineAffected: !!s.timeline && s.timeline.freshness === 'fresh' && affectedPanelVideos > 0,
+    timelineAffected: isTimelineFresh(s.timeline) && affectedPanelVideos > 0,
   }
 }

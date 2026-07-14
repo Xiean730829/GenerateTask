@@ -30,6 +30,7 @@
         "script.generate",
         "shot.generate",
         "asset.extract",
+        "asset.image.generate",
         "keyframe.generate",
         "video.generate",
         "audio.subtitle",
@@ -66,24 +67,48 @@
     },
     "payload": {
       "type": "object",
-      "description": "Immutable input snapshot consumed by the worker. sourceText and projectConfig are supplied for every MS1 task; task-specific inputs may add fields.",
+      "description": "不可变输入快照；字段按 taskType 而定：script/shot 用 sourceText+projectConfig；媒体任务（keyframe/video/audio/export/asset.image）用对应 Revision 快照 id，而非文本。",
+      "$comment": "keyframe.generate 示例 payload：{ shotIds, assetIds, keyframeIds }。video/audio/export/asset.image.generate 的 payload 字段待罗诗辉最终定义后补入。",
       "additionalProperties": true,
-      "required": [
-        "sourceText",
-        "projectConfig"
-      ],
       "properties": {
         "sourceText": {
           "type": "string",
           "minLength": 1,
-          "description": "Source text snapshot selected by Java when the task is created."
+          "description": "文本任务（script/shot）的源文本快照。"
         },
         "projectConfig": {
           "type": "object",
           "additionalProperties": true,
-          "description": "Project configuration snapshot, for example projectType, targetDurationSeconds, aspectRatio and style."
+          "description": "项目配置快照：projectType、targetDurationSeconds、aspectRatio、style 等。"
+        },
+        "shotIds": {
+          "type": "array",
+          "items": { "type": "string", "format": "uuid" },
+          "description": "媒体任务涉及的镜头 id（如 keyframe.generate）。"
+        },
+        "assetIds": {
+          "type": "array",
+          "items": { "type": "string", "format": "uuid" },
+          "description": "解析后的资产 / 资产版本 id。"
+        },
+        "keyframeIds": {
+          "type": "array",
+          "items": { "type": "string", "format": "uuid" },
+          "description": "选定的关键帧 id。"
         }
       }
     }
-  }
+  },
+  "allOf": [
+    {
+      "$comment": "文本任务：payload 必须携带 sourceText 与 projectConfig。",
+      "if": { "required": ["taskType"], "properties": { "taskType": { "enum": ["script.generate", "shot.generate"] } } },
+      "then": { "properties": { "payload": { "required": ["sourceText", "projectConfig"] } } }
+    },
+    {
+      "$comment": "关键帧任务：payload 必须携带 shotIds（不再强制 sourceText）。",
+      "if": { "required": ["taskType"], "properties": { "taskType": { "const": "keyframe.generate" } } },
+      "then": { "properties": { "payload": { "required": ["shotIds"] } } }
+    }
+  ]
 }

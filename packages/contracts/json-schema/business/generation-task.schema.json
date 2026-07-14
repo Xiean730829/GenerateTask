@@ -50,6 +50,7 @@
         "script.generate",
         "shot.generate",
         "asset.extract",
+        "asset.image.generate",
         "keyframe.generate",
         "video.generate",
         "audio.subtitle",

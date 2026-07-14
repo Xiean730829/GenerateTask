@@ -1,28 +1,34 @@
-/* 共享组件 — 线框优先，黑白灰 */
+/* 共享组件 — 卡片分层，无硬边框 */
 
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  border: 1px solid var(--border);
-  background: var(--surface);
+  border: none;
+  background: var(--color-surface-elevated);
   color: var(--text);
-  border-radius: var(--radius-sm);
-  padding: 0.5rem 0.9rem;
+  border-radius: var(--radius-full);
+  padding: 0.5rem 1rem;
   font-weight: 500;
   font-size: 0.875rem;
   cursor: pointer;
   white-space: nowrap;
+  box-shadow: var(--shadow-xs);
   transition:
     background var(--transition-fast),
-    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast),
     opacity var(--transition-fast);
 }
 
 .btn:hover:not(:disabled) {
-  border-color: var(--color-border-strong);
   background: var(--color-surface-hover);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .btn:focus-visible {
@@ -37,67 +43,71 @@
 
 .btn-primary {
   background: var(--primary-strong);
-  border-color: var(--primary-strong);
   color: var(--color-on-primary);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-primary:hover:not(:disabled) {
   background: var(--primary);
-  border-color: var(--primary);
+  box-shadow: var(--shadow-md);
 }
 
 .btn-danger {
-  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
   color: var(--danger);
-  background: var(--surface);
-}
-
-.btn-danger:hover:not(:disabled) {
-  border-color: var(--danger);
   background: color-mix(in srgb, var(--danger) 6%, var(--surface));
 }
 
+.btn-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+}
+
 .btn-sm {
-  padding: 0.3rem 0.6rem;
+  padding: 0.3rem 0.75rem;
   font-size: 0.8125rem;
 }
 
 .btn-ghost {
   background: transparent;
-  border-color: transparent;
+  box-shadow: none;
 }
 
 .btn-ghost:hover:not(:disabled) {
   background: var(--color-surface-hover);
-  border-color: transparent;
+  box-shadow: none;
 }
 
 .card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius-md);
-  padding: 1rem;
+  padding: 1.15rem;
+  box-shadow: var(--shadow-sm);
 }
 
 .card.is-stale {
-  border-color: var(--color-border-strong);
-  border-style: dashed;
+  box-shadow: none;
+  background: var(--surface-2);
+  outline: 1px dashed var(--color-border-strong);
+  outline-offset: -1px;
 }
 
 .card.is-failed {
-  border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
+  box-shadow: var(--shadow-sm), inset 0 0 0 1px color-mix(in srgb, var(--danger) 30%, transparent);
 }
 
 .card-interactive {
   cursor: pointer;
   text-decoration: none;
   color: inherit;
-  transition: border-color var(--transition-fast), background var(--transition-fast);
+  transition:
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast),
+    background var(--transition-fast);
 }
 
 .card-interactive:hover {
-  border-color: var(--color-border-strong);
-  background: var(--color-background-subtle);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 .badge {
@@ -106,34 +116,33 @@
   gap: 0.25rem;
   font-size: 0.6875rem;
   font-weight: 500;
-  padding: 0.15rem 0.5rem;
+  padding: 0.2rem 0.55rem;
   border-radius: var(--radius-full);
-  border: 1px solid var(--border);
+  border: none;
   color: var(--text-dim);
+  background: var(--color-surface-elevated);
   white-space: nowrap;
 }
 
 .badge-done {
   color: var(--success);
-  border-color: color-mix(in srgb, var(--success) 35%, var(--border));
-  background: color-mix(in srgb, var(--success) 8%, var(--surface));
+  background: color-mix(in srgb, var(--success) 10%, var(--surface));
 }
 
 .badge-active {
   color: var(--text);
-  border-color: var(--color-border-strong);
-  background: var(--surface-2);
+  background: var(--color-surface-hover);
+  font-weight: 600;
 }
 
 .badge-failed {
   color: var(--danger);
-  border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
-  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
 }
 
 .badge-stale {
   color: var(--text-dim);
-  border-style: dashed;
+  background: var(--surface-2);
 }
 
 .badge-pending {
@@ -161,8 +170,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  background: color-mix(in srgb, var(--warning) 10%, var(--surface));
-  border-bottom: 1px solid color-mix(in srgb, var(--warning) 30%, var(--border));
+  background: color-mix(in srgb, var(--warning) 12%, var(--surface));
   color: color-mix(in srgb, var(--warning) 80%, #000);
   font-size: 0.8125rem;
   font-weight: 500;
@@ -174,9 +182,10 @@
   color: var(--danger);
   font-size: 0.8125rem;
   background: color-mix(in srgb, var(--danger) 8%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--danger) 25%, var(--border));
+  border: none;
   border-radius: var(--radius-sm);
   padding: 0.55rem 0.75rem;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger) 20%, transparent);
 }
 
 .muted {
@@ -273,12 +282,12 @@
 
 .scroll-bleed-viewport::before {
   left: 0;
-  background: linear-gradient(to right, var(--bg) 30%, transparent);
+  background: linear-gradient(to right, var(--workspace-bg, var(--bg)) 30%, transparent);
 }
 
 .scroll-bleed-viewport::after {
   right: 0;
-  background: linear-gradient(to left, var(--bg) 30%, transparent);
+  background: linear-gradient(to left, var(--workspace-bg, var(--bg)) 30%, transparent);
 }
 
 .scroll-bleed-viewport.has-scroll-progress > .horizontal-scroll {
@@ -351,13 +360,16 @@
   gap: 0.35rem;
   min-height: 110px;
   text-align: left;
-  padding: 0.45rem 0.55rem;
-  border: 1px solid var(--border);
+  padding: 0.5rem 0.6rem;
+  border: none;
   border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--text);
   cursor: pointer;
-  transition: border-color var(--transition-fast);
+  box-shadow: var(--shadow-xs);
+  transition:
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .film-card-head {
@@ -372,14 +384,12 @@
   color: var(--text-dim);
 }
 
-.film-card:hover,
-.film-card.is-selected {
-  border-color: var(--color-border-strong);
+.film-card:hover {
+  box-shadow: var(--shadow-sm);
 }
 
 .film-card.is-selected {
-  border-color: var(--primary-strong);
-  box-shadow: 0 0 0 1px var(--primary-strong);
+  box-shadow: var(--shadow-ring), var(--shadow-sm);
 }
 
 .film-card-skeleton {
@@ -427,16 +437,17 @@
 
 .film-keyframe {
   padding: 0;
-  border: 1px solid var(--border);
+  border: none;
   background: var(--surface-2);
   border-radius: var(--radius-sm);
   overflow: hidden;
-  transition: border-color var(--transition-fast);
+  box-shadow: inset 0 0 0 1px var(--border);
+  transition: box-shadow var(--transition-fast);
 }
 
 .film-card.is-selected .film-keyframe.is-confirmed,
 .film-keyframe.is-confirmed {
-  border-color: var(--primary-strong);
+  box-shadow: inset 0 0 0 2px var(--primary-strong);
 }
 
 .film-keyframe img {
@@ -454,9 +465,10 @@
 
 .film-blocker {
   padding: 0.35rem 0.3rem;
-  border: 1px dashed var(--border);
+  border: none;
   border-radius: var(--radius-sm);
   background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px dashed var(--border);
 }
 
 button.film-blocker {
@@ -465,14 +477,14 @@ button.film-blocker {
   color: inherit;
   cursor: pointer;
   transition:
-    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
     background var(--transition-fast),
     color var(--transition-fast);
 }
 
 button.film-blocker:hover {
-  border-color: var(--primary-strong);
   background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--primary-strong);
   color: var(--text);
 }
 
@@ -519,10 +531,11 @@ button.film-blocker.is-action .film-blocker-text {
 
 .shot-materials,
 .keyframe-results {
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius-md);
-  padding: 0.85rem;
+  padding: 1rem;
   background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .shot-prompt-preview {
@@ -571,21 +584,20 @@ button.film-blocker.is-action .film-blocker-text {
 
 .asset-mention {
   display: inline-flex;
-  border: 1px solid var(--border);
+  border: none;
   background: var(--surface-2);
   color: var(--text);
-  border-radius: var(--radius-sm);
-  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius-full);
+  padding: 0.15rem 0.5rem;
   cursor: pointer;
   font: inherit;
   font-size: 0.875rem;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
+  transition: background var(--transition-fast), color var(--transition-fast);
 }
 
 .asset-mention:hover,
 .asset-mention.is-active {
   background: var(--primary-strong);
-  border-color: var(--primary-strong);
   color: var(--color-on-primary);
 }
 
@@ -638,10 +650,11 @@ button.film-blocker.is-action .film-blocker-text {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius-sm);
-  padding: 0.65rem;
+  padding: 0.75rem;
   background: var(--surface);
+  box-shadow: var(--shadow-xs);
 }
 
 .material-card-top > span:last-child {
@@ -662,7 +675,6 @@ button.film-blocker.is-action .film-blocker-text {
   aspect-ratio: 3 / 2;
   object-fit: cover;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
 }
 
 .asset-candidates {
@@ -695,8 +707,9 @@ button.film-blocker.is-action .film-blocker-text {
 
 .asset-library {
   margin-top: 0.75rem;
-  border-top: 1px solid var(--border);
   padding-top: 0.75rem;
+  border-top: none;
+  box-shadow: inset 0 1px 0 var(--border);
 }
 
 .asset-library summary {
@@ -717,20 +730,20 @@ button.film-blocker.is-action .film-blocker-text {
 }
 
 .asset-tabs button {
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius-full);
-  padding: 0.2rem 0.55rem;
-  background: transparent;
+  padding: 0.25rem 0.65rem;
+  background: var(--surface-2);
   color: var(--text-dim);
   cursor: pointer;
   font-size: 0.8125rem;
-  transition: border-color var(--transition-fast), color var(--transition-fast);
+  transition: background var(--transition-fast), color var(--transition-fast);
 }
 
 .asset-tabs button.is-active {
   color: var(--text);
-  border-color: var(--primary-strong);
-  background: var(--surface-2);
+  background: var(--color-surface-hover);
+  font-weight: 600;
 }
 
 .library-list {
@@ -745,9 +758,10 @@ button.film-blocker.is-action .film-blocker-text {
   grid-template-columns: 42px 1fr auto;
   gap: 0.5rem;
   align-items: center;
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius-sm);
-  padding: 0.4rem;
+  padding: 0.45rem;
+  background: var(--surface-2);
 }
 
 .library-item img {
@@ -805,13 +819,12 @@ button.film-blocker.is-action .film-blocker-text {
 .panel-video-card {
   cursor: pointer;
   transition:
-    border-color var(--transition-fast),
-    box-shadow var(--transition-fast);
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .panel-video-card.is-selected {
-  border-color: var(--primary-strong);
-  box-shadow: 0 0 0 1px var(--primary-strong);
+  box-shadow: var(--shadow-ring), var(--shadow-sm);
 }
 
 .panel-composition-detail {
@@ -819,10 +832,11 @@ button.film-blocker.is-action .film-blocker-text {
   flex-direction: column;
   gap: 0.85rem;
   margin-top: 0.15rem;
-  padding: 0.85rem;
-  border: 1px solid var(--border);
+  padding: 1rem;
+  border: none;
   border-radius: var(--radius-md);
   background: var(--surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .panel-composition-heading h3 {
@@ -853,9 +867,10 @@ button.film-blocker.is-action .film-blocker-text {
   width: 100%;
   aspect-ratio: 16 / 9;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
+  border: none;
   object-fit: cover;
   background: var(--surface-2);
+  box-shadow: var(--shadow-xs);
 }
 
 .panel-composition-shot-empty {
@@ -888,7 +903,7 @@ button.film-blocker.is-action .film-blocker-text {
 
 .panel-prompt-block {
   padding: 0.65rem 0.75rem;
-  border: 1px solid var(--border);
+  border: none;
   border-radius: var(--radius-sm);
   background: var(--surface-2);
 }

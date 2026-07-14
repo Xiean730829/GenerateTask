@@ -1,48 +1,47 @@
-// Mock 内存数据库：保存单一演示用户的全部业务对象。
 import type {
   Asset,
   Episode,
-  ExportJob,
+  Export,
   Id,
+  Keyframe,
   Panel,
+  PanelRevision,
   PanelVideo,
   Project,
   Script,
   Shot,
-  ShotKeyframes,
+  ShotAssetOverride,
   SourceMaterial,
   Timeline,
   VideoCapability,
 } from '@/api/types'
 
-/** 单个 Episode 下的全部生产数据。 */
 export interface EpisodeState {
   episode: Episode
   sourceMaterial: SourceMaterial
   script: Script | null
   shots: Shot[]
-  keyframes: ShotKeyframes[]
+  keyframes: Keyframe[]
+  shotAssetOverrides: ShotAssetOverride[]
   panels: Panel[]
+  panelRevisions: PanelRevision[]
   panelVideos: PanelVideo[]
   timeline: Timeline | null
-  exportJob: ExportJob | null
-  /** 已消费过“首次失败”演示额度的任务类型，保证重试后成功。 */
+  exportRecord: Export | null
   failedOnce: Set<string>
 }
 
 export class MockDb {
   readonly projects = new Map<Id, Project>()
   readonly episodes = new Map<Id, EpisodeState>()
-  /** 单一演示用户的素材库；真实服务以登录用户为边界。 */
   readonly userAssets: Asset[] = []
-  /** 项目最近顺序，最新在前。 */
   readonly recentProjectIds: Id[] = []
+  readonly mediaUrls = new Map<Id, string>()
 
-  /** 当前所选视频 API 能力（全局，MS1 单一）。前端不写死。 */
   readonly videoCapability: VideoCapability = {
-    provider: 'mock-video-1',
-    maxClipDurationSec: 15,
-    supportedDurationsSec: [5, 10, 15],
+    minPanelDurationSeconds: 5,
+    maxPanelDurationSeconds: 15,
+    supportedDurationsSeconds: [5, 10, 15],
   }
 
   getEpisodeState(episodeId: Id): EpisodeState {

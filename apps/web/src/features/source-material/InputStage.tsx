@@ -37,7 +37,9 @@ export function InputStage() {
           </Button>
         }
       />
-      <textarea rows={16} value={text} onChange={(e) => setText(e.target.value)} />
+      <div className="card stack">
+        <textarea rows={16} value={text} onChange={(e) => setText(e.target.value)} />
+      </div>
     </section>
   )
 }

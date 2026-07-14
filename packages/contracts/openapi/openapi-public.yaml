@@ -16,6 +16,8 @@ info:
       - panels/assemble and timeline/compose are synchronous Java aggregations
         (no matching taskType exists), so they return the object directly.
       - Field names are camelCase; identifiers are UUID strings.
+      - 所有"创建任务"的 POST 接口接受可选请求头 Idempotency-Key（唯一范围：用户+接口+key）：
+        相同 key+相同请求返回原任务、不重复投递；相同 key+不同请求返回 409（error.code=IDEMPOTENCY_CONFLICT）。
 servers:
   - url: http://localhost:8080
     description: Local development (java-api)
@@ -44,6 +46,8 @@ tags:
     description: Timeline composition and read. (#6 §12)
   - name: exports
     description: Final MP4 export and download. (#6 §13)
+  - name: media
+    description: 媒体文件读取（对象存储 OSS 签名地址），供关键帧/视频/参考图预览。
   - name: tasks
     description: GenerationTask status, retry and cancel. (#6 §14)
 
@@ -291,6 +295,8 @@ paths:
       description: >-
         Creates a script.generate GenerationTask that the Python worker consumes.
         When sourceMaterialId is omitted, the episode's project source material is used.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: false
         content:
@@ -312,9 +318,10 @@ paths:
       tags: [scripts]
       operationId: getEpisodeScript
       summary: Get the episode's current script (#6 §18.6)
+      description: 剧本尚未生成时返回 200 且 data 为 null（非 404）；404 仅表示分集不存在。
       responses:
         '200':
-          description: Current script for the episode.
+          description: Current script, or null when it has not been generated yet.
           content:
             application/json:
               schema:
@@ -323,7 +330,9 @@ paths:
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/Script'
+                        oneOf:
+                          - type: 'null'
+                          - $ref: '#/components/schemas/Script'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -376,6 +385,8 @@ paths:
       operationId: confirmScriptAndGenerateShots
       summary: Confirm a script and start shot generation
       description: Confirms the current Script and queues its shot.generate GenerationTask.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '202': { $ref: '#/components/responses/TaskAccepted' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -390,6 +401,8 @@ paths:
       operationId: createShotTask
       summary: Start a shot generation task (#6 §18.7)
       description: Creates a shot.generate GenerationTask that splits the script into 3-5 shots.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: false
         content:
@@ -495,8 +508,10 @@ paths:
     post:
       tags: [shots]
       operationId: createShotAssetOverride
-      summary: Create or replace a local asset override
-      description: Only this Shot and its dependent media become stale; the shared Asset is not changed.
+      summary: Attach an asset to the Shot or set a local attribute override
+      description: >-
+        attributes 省略即"仅关联该 Asset 到本镜头"；带 attributes 即在本镜头内设置属性覆盖。
+        只使本镜头及其下游媒体失效，不修改共享 Asset。
       requestBody:
         required: true
         content:
@@ -515,6 +530,60 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /api/shots/{shotId}/asset-overrides/{assetId}:
+    parameters:
+      - $ref: '#/components/parameters/ShotId'
+      - $ref: '#/components/parameters/AssetId'
+    delete:
+      tags: [shots]
+      operationId: deleteShotAssetOverride
+      summary: Remove a Shot's asset override (detach the asset from this Shot)
+      description: 删除该镜头对指定 Asset 的关联/属性覆盖；只影响本镜头及其下游媒体，不改共享 Asset。
+      responses:
+        '200':
+          description: The override/association was removed.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: false
+                        required: [shotId, assetId]
+                        properties:
+                          shotId: { type: string, format: uuid }
+                          assetId: { type: string, format: uuid }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/shots/{shotId}/assets:
+    parameters:
+      - $ref: '#/components/parameters/ShotId'
+    post:
+      tags: [shots]
+      operationId: createAssetForShot
+      summary: Create a new user Asset and attach it to the Shot
+      description: 为镜头新建一个用户级 Asset（角色/道具/场景/风格）并关联到该镜头。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateAssetForShotRequest' }
+      responses:
+        '201':
+          description: Newly created Asset.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/Asset' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /api/shots/{shotId}/keyframe-tasks:
     parameters:
       - $ref: '#/components/parameters/ShotId'
@@ -525,6 +594,8 @@ paths:
       description: >-
         Queues keyframe.generate from the Shot's current PromptRevision and resolved
         AssetRevision/ShotAssetOverride context. It never consumes mutable Asset state directly.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '202': { $ref: '#/components/responses/TaskAccepted' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -536,25 +607,27 @@ paths:
     post:
       tags: [keyframes]
       operationId: createEpisodeKeyframeTasks
-      summary: Start keyframe generation tasks for up to nine selected Shots
+      summary: Start keyframe generation for the next batch of Shots
+      description: >-
+        省略 shotIds 时由服务端挑选下一批（最多 9 个）待生成关键帧的镜头，创建单个 keyframe.generate
+        任务，并返回该任务与本批覆盖的 shotIds。
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema: { $ref: '#/components/schemas/KeyframeBatchRequest' }
       responses:
         '202':
-          description: One task per selected Shot was queued.
+          description: A single keyframe.generate task covering the next batch of Shots was queued.
           content:
             application/json:
               schema:
                 allOf:
                   - $ref: '#/components/schemas/SuccessEnvelope'
                   - type: object
-                    properties:
-                      data:
-                        type: array
-                        items: { $ref: '#/components/schemas/GenerationTask' }
+                    properties: { data: { $ref: '#/components/schemas/KeyframeBatchResult' } }
         '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -668,6 +741,8 @@ paths:
         asset needs from the episode's shots. Character voice settings are attributes of
         character Assets, not independent Assets. episodeId is required in MS1: every task must
         associate the current production Episode (see Issue #10 clarification).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -772,14 +847,14 @@ paths:
             schema: { $ref: '#/components/schemas/UpdateAssetRequest' }
       responses:
         '200':
-          description: Asset with its newly created current revision.
+          description: Updated Asset (with its newly created current revision pointer).
           content:
             application/json:
               schema:
                 allOf:
                   - $ref: '#/components/schemas/SuccessEnvelope'
                   - type: object
-                    properties: { data: { $ref: '#/components/schemas/AssetRevisionImpact' } }
+                    properties: { data: { $ref: '#/components/schemas/Asset' } }
         '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
 
@@ -791,10 +866,37 @@ paths:
       operationId: createAssetReferenceImageTask
       summary: Start reference-image generation for an Asset
       description: Queues asset.image.generate using the Asset's current immutable revision.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '202': { $ref: '#/components/responses/TaskAccepted' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/assets/{assetId}/reference-images:
+    parameters:
+      - $ref: '#/components/parameters/AssetId'
+    get:
+      tags: [assets]
+      operationId: listAssetReferenceImages
+      summary: List an Asset's reference-image candidates
+      description: >-
+        Returns the generated candidate images (each an OSS-backed MediaFile) so the client
+        can preview them before calling confirm with the chosen mediaFileId.
+      responses:
+        '200':
+          description: Candidate reference images for the Asset.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/MediaFile' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   /api/assets/{assetId}/reference-images/{mediaFileId}/confirm:
     parameters:
@@ -823,28 +925,26 @@ paths:
     post:
       tags: [assets]
       operationId: createAssetRevision
-      summary: Create a shared Asset revision and calculate its impact
+      summary: Freeze the Asset's current attributes into a new immutable revision
       description: >-
-        Creating a shared revision does not mutate any Shot. The response gives the
-        affected scope; a separate apply call explicitly chooses target Shots.
+        省略 attributes 即把 Asset 当前属性快照为新的不可变 revision 并返回更新后的 Asset；
+        创建 revision 本身不改动任何 Shot。将 revision 应用到共享下游 Shot 是单独的 apply 步骤。
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/CreateAssetRevisionRequest'
       responses:
         '201':
-          description: Immutable Asset revision and its possible impact.
+          description: Updated Asset with its new current revision.
           content:
             application/json:
               schema:
                 allOf:
                   - $ref: '#/components/schemas/SuccessEnvelope'
                   - type: object
-                    properties:
-                      data:
-                        $ref: '#/components/schemas/AssetRevisionImpact'
+                    properties: { data: { $ref: '#/components/schemas/Asset' } }
         '400':
           $ref: '#/components/responses/BadRequest'
         '404':
@@ -953,6 +1053,8 @@ paths:
       description: >-
         Creates a video.generate GenerationTask from the Panel's current immutable
         PanelRevision. A PanelVideo must never read mutable Shot or Asset state directly.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: false
         content:
@@ -974,6 +1076,8 @@ paths:
       tags: [videos]
       operationId: createEpisodePanelVideoTasks
       summary: Start PanelRevision video tasks for the Episode's selected panels
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: false
         content:
@@ -988,10 +1092,7 @@ paths:
                 allOf:
                   - $ref: '#/components/schemas/SuccessEnvelope'
                   - type: object
-                    properties:
-                      data:
-                        type: array
-                        items: { $ref: '#/components/schemas/GenerationTask' }
+                    properties: { data: { $ref: '#/components/schemas/PanelVideoBatchResult' } }
         '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
@@ -1047,6 +1148,8 @@ paths:
       tags: [videos]
       operationId: regeneratePanelVideo
       summary: Regenerate video from the Panel's current revision
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '202': { $ref: '#/components/responses/TaskAccepted' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -1087,6 +1190,8 @@ paths:
       operationId: createAudioSubtitleTask
       summary: Start episode voiceover + subtitle task (#6 §18.13)
       description: Creates an audio.subtitle GenerationTask for the whole episode.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: false
         content:
@@ -1143,9 +1248,10 @@ paths:
       tags: [timeline]
       operationId: getEpisodeTimeline
       summary: Get the episode's current timeline (#6 §12.2)
+      description: 时间线尚未合成时返回 200 且 data 为 null（非 404）；404 仅表示分集不存在。
       responses:
         '200':
-          description: Current timeline.
+          description: Current timeline, or null when it has not been composed yet.
           content:
             application/json:
               schema:
@@ -1154,7 +1260,9 @@ paths:
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/Timeline'
+                        oneOf:
+                          - type: 'null'
+                          - $ref: '#/components/schemas/Timeline'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -1185,8 +1293,10 @@ paths:
       operationId: createExport
       summary: Start a final MP4 export (#6 §18.15)
       description: >-
-        Creates an Export record and its backing export.compose GenerationTask.
-        Poll the returned export (or its taskId) for status.
+        Creates an Export record and its backing export.compose GenerationTask, and returns
+        the task (202). Poll the task, then fetch the Export via GET /api/exports/{exportId}.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: false
         content:
@@ -1195,16 +1305,7 @@ paths:
               $ref: '#/components/schemas/CreateExportRequest'
       responses:
         '202':
-          description: Export record created; render task queued.
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/SuccessEnvelope'
-                  - type: object
-                    properties:
-                      data:
-                        $ref: '#/components/schemas/Export'
+          $ref: '#/components/responses/TaskAccepted'
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
@@ -1240,8 +1341,8 @@ paths:
       operationId: downloadExport
       summary: Download the final video (#6 §18.17)
       description: >-
-        Redirects to a short-lived signed MinIO URL for the exported MP4. The binary
-        is never streamed through Postgres or served from a local path.
+        Redirects to a short-lived signed object-storage (Aliyun OSS) URL for the exported MP4.
+        The binary is never streamed through Postgres or served from a local path.
       responses:
         '302':
           description: Redirect to a signed object-storage URL.
@@ -1259,6 +1360,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+
+  # ------------------------------------------------------------------- media
+  /api/media-files/{mediaFileId}:
+    parameters:
+      - $ref: '#/components/parameters/MediaFileId'
+    get:
+      tags: [media]
+      operationId: getMediaFile
+      summary: Get a media file with a fresh signed URL
+      description: >-
+        Resolves a mediaFileId (as carried by Keyframe, PanelVideo, subtitle/audio, etc.)
+        into a MediaFile with a short-lived OSS signed URL. Use this to refresh a URL
+        that has expired since it was embedded in a list response.
+      responses:
+        '200':
+          description: Media file metadata and a signed access URL.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/MediaFile' } }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   # ------------------------------------------------------------------- tasks
   /api/tasks/{taskId}:
@@ -1442,6 +1567,12 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: 幂等键。相同 key+相同请求返回原任务、不重复投递；相同 key+不同请求返回 409（error.code=IDEMPOTENCY_CONFLICT）。适用于全部创建任务的 POST。
+      schema: { type: string, minLength: 1, maxLength: 200 }
 
   responses:
     TaskAccepted:
@@ -1499,7 +1630,7 @@ components:
       properties:
         code:
           type: string
-          description: Stable machine-readable error code (e.g. SCRIPT_QUALITY_CHECK_FAILED).
+          description: Stable machine-readable error code (e.g. IDEMPOTENCY_CONFLICT). 完整清单见 packages/contracts/error-codes.md。
         message:
           type: string
         details:
@@ -1544,6 +1675,8 @@ components:
       $ref: ../json-schema/business/shot-prompt-revision.schema.json
     Keyframe:
       $ref: ../json-schema/business/keyframe.schema.json
+    MediaFile:
+      $ref: ../json-schema/business/media-file.schema.json
     Panel:
       $ref: ../json-schema/business/panel.schema.json
     PanelRevision:
@@ -1653,6 +1786,10 @@ components:
           type: string
           format: uuid
           description: Required in MS1 — the current production episode the task belongs to.
+        shotId:
+          type: [string, 'null']
+          format: uuid
+          description: 可选。指定后将资产抽取范围限定到该镜头，否则覆盖分集全部镜头。
     PanelAssembleRequest:
       type: object
       additionalProperties: false
@@ -1681,14 +1818,16 @@ components:
     CreateShotAssetOverrideRequest:
       type: object
       additionalProperties: false
-      required: [assetId, attributes]
+      required: [assetId]
       properties:
         assetId: { type: string, format: uuid }
-        attributes: { type: object, additionalProperties: true }
+        attributes:
+          type: object
+          additionalProperties: true
+          description: 省略即仅关联该 Asset 到本镜头；提供则为镜头内属性覆盖。
     KeyframeBatchRequest:
       type: object
       additionalProperties: false
-      required: [shotIds]
       properties:
         shotIds:
           type: array
@@ -1696,12 +1835,33 @@ components:
           maxItems: 9
           uniqueItems: true
           items: { type: string, format: uuid }
+          description: 省略即由服务端挑选下一批（最多 9 个）待生成关键帧的镜头。
+    KeyframeBatchResult:
+      type: object
+      additionalProperties: false
+      required: [task, shotIds]
+      properties:
+        task: { $ref: '#/components/schemas/GenerationTask' }
+        shotIds:
+          type: array
+          items: { type: string, format: uuid }
+          description: 本次任务覆盖的镜头。
     CreateAssetRevisionRequest:
       type: object
       additionalProperties: false
-      required: [attributes]
       properties:
-        attributes: { type: object, additionalProperties: true }
+        attributes:
+          type: object
+          additionalProperties: true
+          description: 省略即快照 Asset 当前属性为新 revision；提供则以该属性创建新 revision。
+    CreateAssetForShotRequest:
+      type: object
+      additionalProperties: false
+      required: [type, name, description]
+      properties:
+        type: { $ref: '#/components/schemas/AssetType' }
+        name: { type: string, minLength: 1 }
+        description: { type: string }
     UpdateAssetRequest:
       type: object
       additionalProperties: false
@@ -1709,6 +1869,10 @@ components:
       properties:
         name: { type: string, minLength: 1 }
         description: { type: [string, 'null'] }
+        voice:
+          type: object
+          additionalProperties: true
+          description: 角色音色（character 专用），服务端合并进 attributes.voice。
         attributes: { type: object, additionalProperties: true }
     ApplyAssetRevisionRequest:
       type: object
@@ -1748,6 +1912,14 @@ components:
           uniqueItems: true
           items: { type: string, format: uuid }
           description: When omitted, the server queues every eligible Panel current revision in the Episode.
+    PanelVideoBatchResult:
+      type: object
+      additionalProperties: false
+      required: [tasks]
+      properties:
+        tasks:
+          type: array
+          items: { $ref: '#/components/schemas/GenerationTask' }
     ConfirmPanelVideoRequest:
       type: object
       additionalProperties: false

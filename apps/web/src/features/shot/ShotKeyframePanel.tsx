@@ -2,20 +2,22 @@ import type { Shot } from '@/api'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { TaskStatusInline } from '@/components/feedback/TaskStatusInline'
-import { useTask } from '@/hooks/useTask'
-import { useWorkspaceSelector, useWorkspaceStore } from '@/stores/workspace-context'
+import { useLatestTaskByType } from '@/hooks/useLatestTaskByType'
+import { useKeyframesByShot } from '@/hooks/useKeyframesByShot'
+import { mediaUrlFromId } from '@/lib/media-url'
+import { useWorkspaceStore } from '@/stores/workspace-context'
 
 /** 九宫格回写到单个 Shot 后的确认与局部重做。 */
 export function ShotKeyframePanel({ shot }: { shot: Shot }) {
   const store = useWorkspaceStore()
-  const entry = useWorkspaceSelector((s) => s.keyframes.find((k) => k.shotId === shot.id))
-  const task = useTask(entry?.taskId)
+  const entry = useKeyframesByShot(shot.id)
+  const task = useLatestTaskByType('keyframe.generate')
   const generating = task && task.status !== 'succeeded' && task.status !== 'failed' && task.status !== 'canceled'
 
   return (
     <div className="card stack">
       <div className="row" style={{ justifyContent: 'space-between' }}>
-        <strong>镜头 {shot.order}</strong>
+        <strong>镜头 {shot.orderIndex + 1}</strong>
         <div className="row">
           {entry?.selectedKeyframeId ? <Badge tone="done">已选定</Badge> : <Badge tone="pending">未选定</Badge>}
           <Button size="sm" variant="ghost" disabled={generating || !entry?.candidates.length}
@@ -43,7 +45,7 @@ export function ShotKeyframePanel({ shot }: { shot: Shot }) {
                 }}
                 title={selected ? '当前选定' : '确认此镜头关键帧'}
               >
-                <img src={kf.imageUrl} alt={`镜头 ${shot.order} 的关键帧`} width={130} height={180} style={{ borderRadius: 6, display: 'block' }} />
+                <img src={mediaUrlFromId(kf.mediaFileId)} alt={`镜头 ${shot.orderIndex + 1} 的关键帧`} width={130} height={180} style={{ borderRadius: 6, display: 'block' }} />
               </button>
             )
           })}

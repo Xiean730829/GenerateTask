@@ -24,19 +24,19 @@ export const mockScriptService: ScriptService = {
     for (const state of backend.db.episodes.values()) {
       if (state.script?.id !== scriptId) continue
       state.script.status = 'confirmed'
+      state.script.confirmedAt = nowIso()
       state.script.updatedAt = nowIso()
       const episodeId = state.episode.id
-      // 确认剧本后才创建镜头任务；不自动进入镜头阶段由前端控制。
       const task = backend.engine.start({
         episodeId,
         taskType: 'shot.generate',
         onSucceed: () => {
           const s = backend.db.getEpisodeState(episodeId)
-          s.shots = generateShots(episodeId)
+          s.shots = generateShots(episodeId, scriptId)
           return { shotCount: s.shots.length }
         },
       })
-      return { taskId: task.taskId }
+      return { taskId: task.id }
     }
     throw new Error(`Script 不存在：${scriptId}`)
   },

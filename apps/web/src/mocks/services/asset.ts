@@ -1,8 +1,8 @@
 import type { AssetService } from '@/api/contracts'
-import type { Asset, CharacterAsset, CreateAssetForShotInput, Id } from '@/api/types'
+import type { Asset, CreateAssetForShotInput, Id } from '@/api/types'
 import { getShotPromptReferences } from '@/api/prompt-references'
 import { backend } from '@/mocks/backend'
-import { generateAssetImages, generateAssets } from '@/mocks/backend/content'
+import { generateAssets, placeholderAssetImage } from '@/mocks/backend/content'
 import { clone, mockId, nowIso } from '@/mocks/backend/util'
 import { invalidateForShot } from './invalidation'
 
@@ -20,10 +20,6 @@ function findShot(shotId: Id) {
   throw new Error(`镜头不存在：${shotId}`)
 }
 
-/**
- * Mock 中的“识别”以稳定模板模拟。重点是服务契约：每个镜头单独准备素材，
- * 但素材实体存在用户级库中，后续镜头将自动关联已确认的同名素材。
- */
 function seedLibrary(): void {
   const defaults = generateAssets()
   if (backend.db.userAssets.length === 0) {
@@ -31,10 +27,28 @@ function seedLibrary(): void {
     return
   }
   for (const asset of defaults) {
-    const exists = backend.db.userAssets.some(
-      (item) => item.kind === asset.kind && item.name === asset.name,
-    )
+    const exists = backend.db.userAssets.some((item) => item.type === asset.type && item.name === asset.name)
     if (!exists) backend.db.userAssets.push(asset)
+  }
+}
+
+function listAssetsForShot(shotId: Id): Asset[] {
+  const { state } = findShot(shotId)
+  const assetIds = state.shotAssetOverrides
+    .filter((o) => o.shotId === shotId)
+    .map((o) => o.assetId)
+  return assetIds.map(findAsset)
+}
+
+function attachOverride(state: ReturnType<typeof findShot>['state'], shotId: Id, assetId: Id): void {
+  if (!state.shotAssetOverrides.some((o) => o.shotId === shotId && o.assetId === assetId)) {
+    state.shotAssetOverrides.push({
+      id: mockId('sao'),
+      shotId,
+      assetId,
+      attributes: {},
+      createdAt: nowIso(),
+    })
   }
 }
 
@@ -45,8 +59,8 @@ export const mockAssetService: AssetService = {
   },
 
   async listForShot(shotId) {
-    const { shot } = findShot(shotId)
-    return clone(shot.materialAssetIds.map(findAsset))
+    seedLibrary()
+    return clone(listAssetsForShot(shotId))
   },
 
   async prepareForShot(shotId) {
@@ -56,123 +70,101 @@ export const mockAssetService: AssetService = {
       taskType: 'asset.extract',
       onSucceed: () => {
         seedLibrary()
-        const ids = getShotPromptReferences(shot).map((requirement) => {
-          const asset = backend.db.userAssets.find(
-            (item) => item.kind === requirement.kind && item.name === requirement.name,
-          )
+        const refs = getShotPromptReferences(shot)
+        const ids = refs.map((req) => {
+          const asset = backend.db.userAssets.find((item) => item.type === req.type && item.name === req.name)
           if (!asset) throw new Error('Mock 素材库初始化失败')
+          attachOverride(state, shotId, asset.id)
           return asset.id
         })
-        shot.materialAssetIds = ids
-        shot.updatedAt = nowIso()
         return { shotId, assetIds: ids }
       },
     })
-    return { taskId: task.taskId }
+    return { taskId: task.id }
   },
 
   async attachToShot(shotId, assetId) {
-    const { state, shot } = findShot(shotId)
+    const { state } = findShot(shotId)
     findAsset(assetId)
-    if (!shot.materialAssetIds.includes(assetId)) {
-      shot.materialAssetIds.push(assetId)
-      shot.updatedAt = nowIso()
-      invalidateForShot(state, shotId)
-    }
-  },
-
-  async detachFromShot(shotId, assetId) {
-    const { state, shot } = findShot(shotId)
-    shot.materialAssetIds = shot.materialAssetIds.filter((id) => id !== assetId)
-    shot.updatedAt = nowIso()
+    attachOverride(state, shotId, assetId)
     invalidateForShot(state, shotId)
   },
 
-  async createForShot(shotId, input) {
-    const { state, shot } = findShot(shotId)
+  async detachFromShot(shotId, assetId) {
+    const { state } = findShot(shotId)
+    state.shotAssetOverrides = state.shotAssetOverrides.filter(
+      (o) => !(o.shotId === shotId && o.assetId === assetId),
+    )
+    invalidateForShot(state, shotId)
+  },
+
+  async createForShot(shotId, input: CreateAssetForShotInput) {
+    const { state } = findShot(shotId)
     const ts = nowIso()
-    const base = {
-      id: mockId('asset'), ownerId: 'demo-user', kind: input.kind, name: input.name,
-      description: input.description, locked: false, taskId: null, version: 1,
-      definitionStatus: 'draft' as const,
-      imageStatus: 'not-generated' as const,
-      imageCandidates: [], selectedImageUrl: null, createdAt: ts, updatedAt: ts,
+    const asset: Asset = {
+      id: mockId('asset'),
+      ownerUserId: 'demo-user',
+      type: input.type,
+      name: input.name,
+      description: input.description,
+      referenceImageUrl: null,
+      currentRevisionId: null,
+      attributes: input.type === 'character' ? { voice: { preset: '青年女声', speed: 1, pitch: 0 } } : {},
+      locked: false,
+      createdAt: ts,
     }
-    const asset: Asset = input.kind === 'character'
-      ? { ...base, kind: 'character', voice: { preset: '青年女声-清冷', speed: 1, pitch: 0 } }
-      : input.kind === 'scene'
-        ? { ...base, kind: 'scene' }
-        : input.kind === 'prop'
-          ? { ...base, kind: 'prop' }
-          : { ...base, kind: 'style' }
     backend.db.userAssets.push(asset)
-    shot.materialAssetIds.push(asset.id)
-    shot.updatedAt = ts
+    attachOverride(state, shotId, asset.id)
     invalidateForShot(state, shotId)
     return clone(asset)
   },
 
   async updateCharacter(id, input) {
     const asset = findAsset(id)
-    if (asset.kind !== 'character') throw new Error(`素材 ${id} 不是角色`)
-    const character = asset as CharacterAsset
-    if (input.name !== undefined) character.name = input.name
-    if (input.description !== undefined) character.description = input.description
-    if (input.voice) character.voice = { ...character.voice, ...input.voice }
-    character.updatedAt = nowIso()
-    return clone(character)
+    if (input.name !== undefined) asset.name = input.name
+    if (input.description !== undefined) asset.description = input.description
+    if (input.voice) {
+      const voice = (asset.attributes.voice ?? {}) as Record<string, unknown>
+      asset.attributes = { ...asset.attributes, voice: { ...voice, ...input.voice } }
+    }
+    return clone(asset)
   },
 
   async update(id, input) {
     const asset = findAsset(id)
     if (input.name !== undefined) asset.name = input.name
     if (input.description !== undefined) asset.description = input.description
-    asset.updatedAt = nowIso()
     return clone(asset)
   },
 
-  async confirmDefinition(id) {
+  async createRevision(id) {
     const asset = findAsset(id)
-    asset.definitionStatus = 'confirmed'
-    asset.updatedAt = nowIso()
+    const revisionId = mockId('arev')
+    asset.currentRevisionId = revisionId
+    asset.locked = true
     return clone(asset)
   },
 
-  async generateImage(id) {
+  async generateReferenceImage(id) {
     const asset = findAsset(id)
-    if (asset.definitionStatus !== 'confirmed') throw new Error('请先确认素材文字定义')
+    const { state } = [...backend.db.episodes.values()]
+      .map((s) => ({ state: s, shot: s.shots[0] }))
+      .find((x) => x.state.shotAssetOverrides.some((o) => o.assetId === id)) ?? { state: backend.db.episodes.values().next().value!, shot: null }
     const task = backend.engine.start({
-      episodeId: firstRelatedEpisodeId(id),
+      episodeId: state.episode.id,
       taskType: 'asset.image.generate',
       onSucceed: () => {
-        const current = findAsset(id)
-        current.imageCandidates = generateAssetImages(id, current.version + current.name.length)
-        current.imageStatus = 'awaiting-confirmation'
-        current.taskId = null
-        current.updatedAt = nowIso()
-        return { assetId: id, count: current.imageCandidates.length }
+        const url = placeholderAssetImage(id, 1)
+        asset.referenceImageUrl = url
+        return { assetId: id }
       },
     })
-    asset.imageStatus = 'generating'
-    asset.taskId = task.taskId
-    asset.updatedAt = nowIso()
-    return { taskId: task.taskId }
+    return { taskId: task.id }
   },
 
-  async confirmImage(id, imageUrl) {
+  async confirmReferenceImage(id, mediaFileId) {
     const asset = findAsset(id)
-    if (!asset.imageCandidates.includes(imageUrl)) throw new Error('素材候选图不存在')
-    asset.selectedImageUrl = imageUrl
-    asset.imageStatus = 'confirmed'
-    asset.locked = true
-    asset.updatedAt = nowIso()
+    asset.referenceImageUrl = backend.db.mediaUrls.get(mediaFileId) ?? placeholderAssetImage(id, 2)
     return clone(asset)
   },
-}
-
-function firstRelatedEpisodeId(assetId: Id): Id {
-  for (const state of backend.db.episodes.values()) {
-    if (state.shots.some((shot) => shot.materialAssetIds.includes(assetId))) return state.episode.id
-  }
-  throw new Error(`没有镜头关联素材：${assetId}`)
 }

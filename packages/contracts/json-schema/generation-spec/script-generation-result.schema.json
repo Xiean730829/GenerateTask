@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/generation-spec/script-generation-result.schema.json",
+  "title": "ScriptGenerationResult 剧本生成结果",
+  "description": "script.generate 成功回写时 task-result.result 的结构（方案 B）。除完整 Script 外，同时回传故事圣经、质检结果、自动改写次数与各阶段 Prompt 版本，便于工作台展示与可追溯。",
+  "$comment": "task-result 本身不带 taskType，故按 taskType 区分的结果结构由 Java 依据任务类型选用对应结果 Schema 校验；本文件即 script.generate 的结果契约。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "script", "rewriteCount"],
+  "properties": {
+    "schemaVersion": {
+      "description": "结果结构版本，例如 1.0",
+      "type": "string",
+      "minLength": 1
+    },
+    "script": {
+      "description": "完整 Script 对象（不是仅 scriptId）",
+      "$ref": "../business/script.schema.json"
+    },
+    "storyBible": {
+      "description": "故事圣经：人物、风格、世界观与叙事基调。可空。",
+      "type": ["object", "null"],
+      "additionalProperties": true
+    },
+    "quality": {
+      "description": "质检结果：是否通过、问题列表等。可空。",
+      "type": ["object", "null"],
+      "additionalProperties": true
+    },
+    "rewriteCount": {
+      "description": "自动改写次数（MS1 最多 1 次）",
+      "type": "integer",
+      "minimum": 0
+    },
+    "promptVersions": {
+      "description": "各阶段使用的 Prompt 版本，例如 { expander: v1, qualityChecker: v1, rewriter: v1, shotDesigner: v1 }。可空。",
+      "type": ["object", "null"],
+      "additionalProperties": true
+    }
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/business/media-file.schema.json",
+  "title": "MediaFile 媒体文件",
+  "description": "对象存储（阿里云 OSS）中媒体文件的可读视图。二进制不入库，数据库仅保存元数据；前端通过 url（OSS 签名地址，短期有效）预览或下载。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "fileType", "url", "createdAt"],
+  "properties": {
+    "id": {
+      "description": "媒体文件唯一标识",
+      "type": "string",
+      "format": "uuid"
+    },
+    "fileType": {
+      "description": "文件类型：source_upload 上传材料，asset_reference_image 资产参考图，keyframe_image 关键帧，panel_video 片段视频，audio 配音，subtitle 字幕，export 导出成片。",
+      "type": "string",
+      "enum": [
+        "source_upload",
+        "asset_reference_image",
+        "keyframe_image",
+        "panel_video",
+        "audio",
+        "subtitle",
+        "export"
+      ]
+    },
+    "url": {
+      "description": "对象存储（阿里云 OSS）签名访问地址，短期有效；地址过期后重新拉取 MediaFile 即可获得新地址。",
+      "type": "string",
+      "format": "uri"
+    },
+    "mimeType": {
+      "description": "MIME 类型，例如 image/png、video/mp4、audio/mpeg、application/x-subrip，可空。",
+      "type": ["string", "null"]
+    },
+    "sizeBytes": {
+      "description": "文件大小（字节），可空",
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "durationSeconds": {
+      "description": "时长（秒），音视频有效，可空",
+      "type": ["number", "null"],
+      "minimum": 0
+    },
+    "width": {
+      "description": "宽（像素），图片/视频有效，可空",
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "height": {
+      "description": "高（像素），图片/视频有效，可空",
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "relatedObjectType": {
+      "description": "关联业务对象类型，例如 shot、panel、export，可空。（bucket/objectKey 等存储内部元数据不对外暴露）",
+      "type": ["string", "null"]
+    },
+    "relatedObjectId": {
+      "description": "关联业务对象 ID，可空",
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "createdAt": {
+      "description": "创建时间",
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

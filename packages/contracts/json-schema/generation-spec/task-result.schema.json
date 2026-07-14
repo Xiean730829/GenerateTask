@@ -82,5 +82,33 @@
       "type": "string",
       "format": "date-time"
     }
-  }
+  },
+  "allOf": [
+    {
+      "$comment": "running：必须带 progress；禁止带 result / error。",
+      "if": { "required": ["status"], "properties": { "status": { "const": "running" } } },
+      "then": {
+        "required": ["progress"],
+        "not": { "anyOf": [{ "required": ["result"] }, { "required": ["error"] }] }
+      }
+    },
+    {
+      "$comment": "succeeded：必须带 result 且 progress=100；禁止带 error。",
+      "if": { "required": ["status"], "properties": { "status": { "const": "succeeded" } } },
+      "then": {
+        "required": ["result"],
+        "properties": { "progress": { "const": 100 } },
+        "not": { "required": ["error"] }
+      }
+    },
+    {
+      "$comment": "failed：必须带 error 且 progress=100；禁止带 result。",
+      "if": { "required": ["status"], "properties": { "status": { "const": "failed" } } },
+      "then": {
+        "required": ["error"],
+        "properties": { "progress": { "const": 100 } },
+        "not": { "required": ["result"] }
+      }
+    }
+  ]
 }

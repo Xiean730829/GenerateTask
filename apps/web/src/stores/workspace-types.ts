@@ -2,29 +2,26 @@ import type {
   Asset,
   ConnectionState,
   Episode,
-  ExportJob,
+  Export,
   GenerationTask,
   Id,
+  Keyframe,
   Panel,
   PanelVideo,
   Project,
   Script,
   Shot,
-  ShotKeyframes,
   SourceMaterial,
   Timeline,
   VideoCapability,
 } from '@/api'
 
-/** 数据加载状态。 */
 export type LoadState = 'idle' | 'loading' | 'ready' | 'error'
 
-/** Episode 工作台的全部前端状态。任务事件按 taskId 就地映射到这些对象。 */
 export interface WorkspaceState {
   load: LoadState
   error: string | null
   connection: ConnectionState
-
   project: Project | null
   episode: Episode | null
   sourceMaterial: SourceMaterial | null
@@ -32,15 +29,14 @@ export interface WorkspaceState {
   shots: Shot[]
   assets: Asset[]
   assetsLocked: boolean
-  keyframes: ShotKeyframes[]
+  keyframes: Keyframe[]
   panels: Panel[]
   panelVideos: PanelVideo[]
   timeline: Timeline | null
-  exportJob: ExportJob | null
+  exportRecord: Export | null
   videoCapability: VideoCapability | null
-
-  /** 当前 episode 的任务快照，按 taskId 索引。 */
   tasks: Record<Id, GenerationTask>
+  shotAssets: Record<Id, Asset[]>
 }
 
 export const initialWorkspaceState: WorkspaceState = {
@@ -58,7 +54,8 @@ export const initialWorkspaceState: WorkspaceState = {
   panels: [],
   panelVideos: [],
   timeline: null,
-  exportJob: null,
+  exportRecord: null,
   videoCapability: null,
   tasks: {},
+  shotAssets: {},
 }
