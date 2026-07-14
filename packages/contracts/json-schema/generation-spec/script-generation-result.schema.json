@@ -14,18 +14,22 @@
       "minLength": 1
     },
     "script": {
-      "description": "完整 Script 对象（不是仅 scriptId）",
-      "$ref": "../business/script.schema.json"
+      "description": "剧本生成产物（创作结构，非库实体）。落库后由 Java 转换为 business/script.schema.json 的 Script。",
+      "$ref": "generated-script.schema.json"
     },
     "storyBible": {
-      "description": "故事圣经：人物、风格、世界观与叙事基调。可空。",
-      "type": ["object", "null"],
-      "additionalProperties": true
+      "description": "故事圣经（元信息 + 世界设定）。可空。",
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "story-bible.schema.json" }
+      ]
     },
     "quality": {
-      "description": "质检结果：是否通过、问题列表等。可空。",
-      "type": ["object", "null"],
-      "additionalProperties": true
+      "description": "剧本质检结果。可空。",
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "script-quality.schema.json" }
+      ]
     },
     "rewriteCount": {
       "description": "自动改写次数（MS1 最多 1 次）",
@@ -33,9 +37,9 @@
       "minimum": 0
     },
     "promptVersions": {
-      "description": "各阶段使用的 Prompt 版本，例如 { expander: v1, qualityChecker: v1, rewriter: v1, shotDesigner: v1 }。可空。",
+      "description": "各阶段 Prompt 版本映射：键为阶段名（如 scriptExpander），值为版本号。可空。",
       "type": ["object", "null"],
-      "additionalProperties": true
+      "additionalProperties": { "type": "string" }
     }
   }
 }

@@ -25,9 +25,46 @@
       "description": "一句话剧情梗概，可空",
       "type": ["string", "null"]
     },
+    "storyPromise": {
+      "description": "AI 内容层提取的故事承诺，可空",
+      "type": ["string", "null"]
+    },
+    "storySummary": {
+      "description": "完整但精炼的故事梗概，可空",
+      "type": ["string", "null"]
+    },
+    "finalOutcome": {
+      "description": "故事最终结果及主角外部处境变化，可空",
+      "type": ["string", "null"]
+    },
     "content": {
       "description": "剧本完整文本，可空",
       "type": ["string", "null"]
+    },
+    "targetDurationSeconds": {
+      "description": "目标时长（秒），可空",
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "language": {
+      "description": "剧本语言标签，可空",
+      "type": ["string", "null"]
+    },
+    "genre": {
+      "description": "剧本题材，可空",
+      "type": ["string", "null"]
+    },
+    "style": {
+      "description": "剧本视觉/创作风格，可空",
+      "type": ["string", "null"]
+    },
+    "characters": {
+      "description": "从 Python 内容 Script 映射来的结构化人物信息，可空",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
     },
     "scenes": {
       "description": "可选的结构化场景拆分。MS1 阶段结构自由，暂不强约束字段。",

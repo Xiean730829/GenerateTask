@@ -1465,7 +1465,8 @@ paths:
       summary: Retry a failed task (#6 §14.5)
       description: >-
         Allowed only from failed. Produces a new attempt; stale callbacks from the old
-        attempt are ignored by the task module.
+        attempt are ignored by the task module. 当 retryable=false 或 retry_count 已达
+        maxRetries（默认 3）时拒绝重试（409），此时用户只能 cancel。
       responses:
         '202':
           $ref: '#/components/responses/TaskAccepted'

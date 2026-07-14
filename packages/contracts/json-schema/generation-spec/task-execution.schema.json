@@ -67,48 +67,122 @@
     },
     "payload": {
       "type": "object",
-      "description": "不可变输入快照；字段按 taskType 而定：script/shot 用 sourceText+projectConfig；媒体任务（keyframe/video/audio/export/asset.image）用对应 Revision 快照 id，而非文本。",
-      "$comment": "keyframe.generate 示例 payload：{ shotIds, assetIds, keyframeIds }。video/audio/export/asset.image.generate 的 payload 字段待罗诗辉最终定义后补入。",
+      "description": "不可变输入快照。Python Worker 不读数据库，故 payload 必须自包含：文本任务携带文本，媒体任务携带不可变 Revision id + 生成所需的已解析内容（媒体统一走 OSS 签名 URL）。各 taskType 的必需字段由下方 allOf 按类型强制。",
+      "$comment": "字段依不可变 Revision 架构（Issue #12）初定，具体以 worker 实现对齐；additionalProperties:true 允许 worker 扩展。",
       "additionalProperties": true,
       "properties": {
-        "sourceText": {
-          "type": "string",
-          "minLength": 1,
-          "description": "文本任务（script/shot）的源文本快照。"
-        },
         "projectConfig": {
           "type": "object",
           "additionalProperties": true,
-          "description": "项目配置快照：projectType、targetDurationSeconds、aspectRatio、style 等。"
+          "description": "项目配置快照：projectType、targetDurationSeconds、aspectRatio、style。用于保持全链路风格一致。"
+        },
+        "sourceText": {
+          "type": "string",
+          "minLength": 1,
+          "description": "[script.generate] 一句话/材料源文本快照。"
+        },
+        "scriptText": {
+          "type": "string",
+          "minLength": 1,
+          "description": "[shot.generate] 待拆分的剧本全文（来自 GeneratedScript.scriptText）。"
+        },
+        "assetId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "[asset.image.generate] 目标资产 id。"
+        },
+        "assetRevisionId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "[asset.image.generate] 渲染所依据的不可变 AssetRevision。"
+        },
+        "prompt": {
+          "type": "string",
+          "description": "[asset.image.generate] 由 Revision 属性推导出的渲染提示词。"
         },
         "shotIds": {
           "type": "array",
           "items": { "type": "string", "format": "uuid" },
-          "description": "媒体任务涉及的镜头 id（如 keyframe.generate）。"
+          "description": "[keyframe.generate] 本批目标镜头 id。"
         },
-        "assetIds": {
+        "renderItems": {
           "type": "array",
-          "items": { "type": "string", "format": "uuid" },
-          "description": "解析后的资产 / 资产版本 id。"
+          "description": "[keyframe.generate] 每个镜头的已解析渲染快照：镜头 id、ShotPromptRevision、提示词、景别、参考图 OSS URL 等。",
+          "items": { "type": "object", "additionalProperties": true }
         },
-        "keyframeIds": {
+        "panelId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "[video.generate] 目标片段 id。"
+        },
+        "panelRevisionId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "[video.generate] 生成所依据的唯一不可变 PanelRevision。"
+        },
+        "keyframeImageUrls": {
           "type": "array",
-          "items": { "type": "string", "format": "uuid" },
-          "description": "选定的关键帧 id。"
+          "items": { "type": "string", "format": "uri" },
+          "description": "[video.generate] 该 PanelRevision 选定关键帧的 OSS 签名 URL（作为首/尾帧或条件帧）。"
+        },
+        "dialogueLines": {
+          "type": "array",
+          "description": "[audio.subtitle] 已解析台词序列：镜头、说话人、台词、起止时间，用于配音与字幕对齐。",
+          "items": { "type": "object", "additionalProperties": true }
+        },
+        "voice": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "[audio.subtitle] 音色配置：角色→音色映射或 MS1 固定音色。"
+        },
+        "timelineId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "[export.compose] 待导出的时间线 id。"
+        },
+        "segments": {
+          "type": "array",
+          "description": "[export.compose] 按顺序排列的合成片段：片段视频 URL、音频 URL、字幕 URL、时长，供 ffmpeg 拼接。",
+          "items": { "type": "object", "additionalProperties": true }
         }
       }
     }
   },
   "allOf": [
     {
-      "$comment": "文本任务：payload 必须携带 sourceText 与 projectConfig。",
-      "if": { "required": ["taskType"], "properties": { "taskType": { "enum": ["script.generate", "shot.generate"] } } },
+      "$comment": "script.generate：源文本 + 项目配置。",
+      "if": { "required": ["taskType"], "properties": { "taskType": { "const": "script.generate" } } },
       "then": { "properties": { "payload": { "required": ["sourceText", "projectConfig"] } } }
     },
     {
-      "$comment": "关键帧任务：payload 必须携带 shotIds（不再强制 sourceText）。",
+      "$comment": "shot.generate：剧本全文 + 项目配置。",
+      "if": { "required": ["taskType"], "properties": { "taskType": { "const": "shot.generate" } } },
+      "then": { "properties": { "payload": { "required": ["scriptText", "projectConfig"] } } }
+    },
+    {
+      "$comment": "asset.image.generate：资产 + 其不可变 Revision。",
+      "if": { "required": ["taskType"], "properties": { "taskType": { "const": "asset.image.generate" } } },
+      "then": { "properties": { "payload": { "required": ["assetId", "assetRevisionId"] } } }
+    },
+    {
+      "$comment": "keyframe.generate：目标镜头 + 已解析渲染快照。",
       "if": { "required": ["taskType"], "properties": { "taskType": { "const": "keyframe.generate" } } },
-      "then": { "properties": { "payload": { "required": ["shotIds"] } } }
+      "then": { "properties": { "payload": { "required": ["shotIds", "renderItems"] } } }
+    },
+    {
+      "$comment": "video.generate：片段 + 其唯一 PanelRevision。",
+      "if": { "required": ["taskType"], "properties": { "taskType": { "const": "video.generate" } } },
+      "then": { "properties": { "payload": { "required": ["panelId", "panelRevisionId"] } } }
+    },
+    {
+      "$comment": "audio.subtitle：已解析台词序列。",
+      "if": { "required": ["taskType"], "properties": { "taskType": { "const": "audio.subtitle" } } },
+      "then": { "properties": { "payload": { "required": ["dialogueLines"] } } }
+    },
+    {
+      "$comment": "export.compose：时间线 + 有序合成片段。",
+      "if": { "required": ["taskType"], "properties": { "taskType": { "const": "export.compose" } } },
+      "then": { "properties": { "payload": { "required": ["timelineId", "segments"] } } }
     }
   ]
 }

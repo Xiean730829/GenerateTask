@@ -1,0 +1,105 @@
+{
+"messageId": "11111111-1111-4111-8111-111111111111",
+"taskId": "22222222-2222-4222-8222-222222222222",
+"episodeId": "44444444-4444-4444-8444-444444444444",
+"status": "succeeded",
+"attempt": 0,
+"progress": 100,
+"result": {
+"schemaVersion": "1.0",
+"script": {
+"title": "雨夜密信",
+"logline": "失忆将军在雨夜发现敌军密信，被迫在信任与背叛间抉择。",
+"storyPromise": "让观众在一场持续逼近的雨夜危机中，看见一个失忆将军必须用行动判断自己究竟站在哪一边。",
+"storySummary": "失忆将军在雨夜军帐发现一封带有自己字迹的敌军密信，随着城外逼近的战事和副将的隐瞒，他必须在自保与揭露内应之间作出选择。",
+"finalOutcome": "将军公开密信并阻止内应打开城门，虽然失去军中信任，却保住城防并开始追查自己的失忆真相。",
+"targetDurationSeconds": 60,
+"language": "zh-CN",
+"genre": "古风悬疑",
+"style": "冷雨、湿木与军帐火光形成对照，关键证据出现时保持克制的近距离观察",
+"characters": [
+{
+"name": "沈砚",
+"narrativeRole": "失忆将军",
+"description": "三十余岁，黑色湿发贴在额角，深色铠甲沾有雨水；面对陌生字迹时会反复摩挲指节。",
+"relationships": ["与副将顾衡共同守城，但开始怀疑顾衡隐瞒事实"]
+},
+{
+"name": "顾衡",
+"narrativeRole": "将军副将",
+"description": "四十岁左右，旧军袍外披蓑衣，右手始终压着腰间佩刀；回答问题时刻意避开密信。",
+"relationships": ["沈砚的副将，掌握城门换防信息"]
+}
+],
+"scenes": [
+{
+"sceneIndex": 1,
+"slugline": "INT｜边城军帐｜暴雨夜",
+"purpose": "建立密信疑点并让将军的失忆与城防危机相撞",
+"dramaticChange": "沈砚从确认军情转为怀疑自己曾参与密信传递",
+"environment": "雨水沿军帐缝隙滴入木盆，桌上油灯被风压低，湿木和墨迹混在一起。",
+"characterState": "沈砚脱下半湿披风站在案前；顾衡守在帐门，手掌压着刀柄。",
+"elements": [
+{ "type": "action", "content": "沈砚展开密信，看见落款笔锋与自己指节上的旧伤相同。" },
+{ "type": "dialogue", "speaker": "沈砚", "performanceCue": "压低声音，盯着落款", "text": "这是谁写的？" }
+]
+},
+{
+"sceneIndex": 2,
+"slugline": "EXT｜边城西侧城墙｜雨势稍缓",
+"purpose": "让将军用可观察行动验证密信中的内应线索",
+"dramaticChange": "沈砚从怀疑转为公开阻止换防命令",
+"environment": "城墙石缝积水反射火把，远处城门绞盘发出断续摩擦声。",
+"characterState": "沈砚握着密信站在垛口；顾衡带两名士兵靠近换防闸门。",
+"elements": [
+{ "type": "action", "content": "沈砚撕下密信上的换防时刻，举火烧掉写有暗号的边角，并挡住顾衡伸向绞盘的手。" },
+{ "type": "dialogue", "speaker": "顾衡", "performanceCue": "停在绞盘旁，声音发紧", "text": "将军，你想起什么了？" }
+]
+}
+],
+"scriptText": "[TITLE]\n雨夜密信\n\n[LOGLINE]\n失忆将军在雨夜发现敌军密信，被迫在信任与背叛间抉择。\n\n[STORY_PROMISE]\n让观众在一场持续逼近的雨夜危机中，看见一个失忆将军必须用行动判断自己究竟站在哪一边。\n\n[STORY_SUMMARY]\n失忆将军在雨夜军帐发现一封带有自己字迹的敌军密信，随着城外逼近的战事和副将的隐瞒，他必须在自保与揭露内应之间作出选择。\n\n[FINAL_OUTCOME]\n将军公开密信并阻止内应打开城门，虽然失去军中信任，却保住城防并开始追查自己的失忆真相。\n\n[CHARACTERS]\n- 沈砚｜失忆将军｜湿发、深色铠甲、指节旧伤｜反复摩挲指节表现不确定｜开始怀疑副将\n- 顾衡｜将军副将｜旧军袍、蓑衣、手压刀柄｜回答问题时避开密信｜掌握换防信息\n\n[SCRIPT]\n\n[SCENE 1]\nSLUGLINE: INT｜边城军帐｜暴雨夜\nSCENE_PURPOSE: 建立密信疑点并让将军的失忆与城防危机相撞\nDRAMATIC_CHANGE: 沈砚从确认军情转为怀疑自己曾参与密信传递\nENVIRONMENT: 雨水沿军帐缝隙滴入木盆，桌上油灯被风压低。\nCHARACTER_STATE: 沈砚站在案前；顾衡守在帐门。\n\n[ACTION]\n沈砚展开密信，看见落款笔锋与自己指节上的旧伤相同。\n\n[DIALOGUE]\n沈砚（压低声音，盯着落款）: 这是谁写的？\n\n[END_SCENE]\n\n[SCENE 2]\nSLUGLINE: EXT｜边城西侧城墙｜雨势稍缓\nSCENE_PURPOSE: 用行动验证密信线索\nDRAMATIC_CHANGE: 沈砚从怀疑转为公开阻止换防命令\nENVIRONMENT: 城墙石缝积水反射火把，远处绞盘发出摩擦声。\nCHARACTER_STATE: 沈砚握着密信站在垛口；顾衡靠近换防闸门。\n\n[ACTION]\n沈砚烧掉暗号边角并挡住顾衡伸向绞盘的手。\n\n[DIALOGUE]\n顾衡（声音发紧）: 将军，你想起什么了？\n\n[END_SCENE]\n\n[END_SCRIPT]"
+},
+"storyBible": {
+"metadata": {
+"title": "雨夜密信",
+"logline": "失忆将军在雨夜发现敌军密信，被迫在信任与背叛间抉择。",
+"genre": "古风悬疑",
+"language": "zh-CN",
+"targetDurationSeconds": 60,
+"aspectRatio": "9:16",
+"tone": "紧张、克制",
+"visualStyle": "冷雨、湿木与军帐火光形成对照，关键证据出现时保持克制的近距离观察",
+"directorialVoice": "观察式自然主义；通过手部动作、遮挡和有来源的火光表现不确定性"
+},
+"worldSettings": {
+"timePeriod": "架空古代边城",
+"geography": "被暴雨包围的边境城池",
+"socialContext": "军令、忠诚与守城责任相互牵制的军事秩序",
+"worldRules": [],
+"environmentBaseline": "木制军帐、石砌城墙、积水和火把构成主要空间；雨势随场景推进变化。",
+"colorAndLightBaseline": "军帐使用低亮度油灯，城墙使用有明确来源的火把；雨水反射火光但不改变人物身份。",
+"coreThemes": ["记忆与责任", "信任与背叛"],
+"forbiddenContradictions": ["密信内容不得在没有行动证据的情况下被直接证实", "核心冲突不得脱离边城军帐与城墙空间"]
+}
+},
+"quality": {
+"passed": true,
+"score": 88,
+"problems": [],
+"summary": "冲突、转折、结局和可视化动作完整，可以进入后续生产。"
+},
+"rewriteCount": 0,
+"promptVersions": {
+"scriptExpander": "v1",
+"scriptGenerator": "v1",
+"scriptQualityChecker": "v1",
+"scriptRewriter": "v1",
+"storyBibleExtractor": "v1"
+}
+},
+"worker": {
+"name": "script-worker",
+"version": "ms1"
+},
+"reportedAt": "2026-07-12T12:01:30Z"
+}

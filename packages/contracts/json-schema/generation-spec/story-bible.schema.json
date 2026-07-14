@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/generation-spec/story-bible.schema.json",
+  "title": "StoryBible 故事圣经",
+  "description": "script.generate 产物的一部分：项目级一致性约束（元信息 + 世界设定），供下游镜头/资产/视频生成保持人物、风格与世界观一致。字段依当前 Worker 产物推断，最终以罗诗辉定义为准。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["metadata", "worldSettings"],
+  "properties": {
+    "metadata": {
+      "description": "作品元信息与导演基调",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "logline", "genre", "tone", "visualStyle"],
+      "properties": {
+        "title": { "description": "标题", "type": "string", "minLength": 1 },
+        "logline": { "description": "一句话梗概", "type": "string", "minLength": 1 },
+        "genre": { "description": "题材类型", "type": "string" },
+        "language": { "description": "语言标签，例如 zh-CN。可空。", "type": ["string", "null"] },
+        "targetDurationSeconds": { "description": "目标时长（秒）。可空。", "type": ["integer", "null"], "minimum": 1 },
+        "aspectRatio": { "description": "画幅比例，例如 9:16。可空。", "type": ["string", "null"] },
+        "tone": { "description": "整体基调，例如 紧张、克制", "type": "string" },
+        "visualStyle": { "description": "视觉风格基线", "type": "string" },
+        "directorialVoice": { "description": "导演手法/镜头语言基线。可空。", "type": ["string", "null"] }
+      }
+    },
+    "worldSettings": {
+      "description": "世界设定与一致性红线",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["timePeriod", "geography", "coreThemes"],
+      "properties": {
+        "timePeriod": { "description": "时代背景", "type": "string" },
+        "geography": { "description": "地理/空间设定", "type": "string" },
+        "socialContext": { "description": "社会/秩序背景。可空。", "type": ["string", "null"] },
+        "worldRules": {
+          "description": "世界规则清单（可为空数组）",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "environmentBaseline": { "description": "环境基线描述。可空。", "type": ["string", "null"] },
+        "colorAndLightBaseline": { "description": "色彩与光线基线。可空。", "type": ["string", "null"] },
+        "coreThemes": {
+          "description": "核心主题",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "forbiddenContradictions": {
+          "description": "禁止出现的矛盾/一致性红线（可为空数组）",
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}
