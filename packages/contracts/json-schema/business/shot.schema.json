@@ -27,6 +27,11 @@
       "type": "integer",
       "minimum": 0
     },
+    "sceneIndex": {
+      "description": "来源剧本场次序号。Python shotIndex 映射到 orderIndex，不额外暴露重复字段。",
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
     "durationSeconds": {
       "description": "镜头时长（秒），可空",
       "type": ["number", "null"],
@@ -36,6 +41,10 @@
       "description": "景别，例如远景、全景、近景、特写，可空",
       "type": ["string", "null"]
     },
+    "environmentDescription": {
+      "description": "当前镜头局部可见环境描述，可空",
+      "type": ["string", "null"]
+    },
     "characters": {
       "description": "出场角色名称列表",
       "type": "array",
@@ -43,17 +52,48 @@
         "type": "string"
       }
     },
+    "characterInstances": {
+      "description": "当前镜头角色实例及其局部状态，可空",
+      "type": ["array", "null"],
+      "items": { "type": "object", "additionalProperties": true }
+    },
+    "propInstances": {
+      "description": "当前镜头道具实例及其局部状态，可空",
+      "type": ["array", "null"],
+      "items": { "type": "object", "additionalProperties": true }
+    },
     "action": {
       "description": "镜头动作描述，可空",
+      "type": ["string", "null"]
+    },
+    "endState": {
+      "description": "当前镜头结束时可观察到的局部状态，不承载跨镜头剧情转折，可空",
       "type": ["string", "null"]
     },
     "dialogue": {
       "description": "镜头台词，可空",
       "type": ["string", "null"]
     },
+    "dialogues": {
+      "description": "镜头台词数组及说话人等结构化信息，可空",
+      "type": ["array", "null"],
+      "items": { "type": "object", "additionalProperties": true }
+    },
     "cameraMovement": {
       "description": "运镜方式，例如推、拉、摇、移，可空",
       "type": ["string", "null"]
+    },
+    "cameraDescription": {
+      "description": "镜头构图、机位和运镜的完整描述，可空",
+      "type": ["string", "null"]
+    },
+    "audioDescription": {
+      "description": "镜头内环境声、音效和声音设计描述，可空",
+      "type": ["string", "null"]
+    },
+    "continuityLocks": {
+      "description": "供后续镜头继承的连续性锁定信息，可空",
+      "type": ["object", "array", "null"]
     },
     "generationPrompt": {
       "description": "用于关键帧/视频生成的提示词，可空",

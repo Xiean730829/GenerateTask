@@ -29,6 +29,15 @@ class CoreEntityMappingContractTest {
         assertEquals("story_promise", columnName(script, "storyPromise"));
         assertEquals("shot", shot.getAnnotation(Table.class).name());
         assertEquals("current_prompt_revision_id", columnName(shot, "currentPromptRevisionId"));
+        assertEquals("scene_index", columnName(shot, "sceneIndex"));
+        assertEquals("environment_description", columnName(shot, "environmentDescription"));
+        assertEquals("character_instances", columnName(shot, "characterInstances"));
+        assertEquals("prop_instances", columnName(shot, "propInstances"));
+        assertEquals("end_state", columnName(shot, "endState"));
+        assertEquals("dialogues", columnName(shot, "dialogues"));
+        assertEquals("camera_description", columnName(shot, "cameraDescription"));
+        assertEquals("audio_description", columnName(shot, "audioDescription"));
+        assertEquals("continuity_locks", columnName(shot, "continuityLocks"));
         assertEquals("shot_prompt_revision", promptRevision.getAnnotation(Table.class).name());
         assertEquals("asset_overrides_snapshot", columnName(promptRevision, "assetOverridesSnapshot"));
     }

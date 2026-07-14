@@ -39,6 +39,25 @@ class MigrationDesignRegressionTest {
         assertTrue(migration.contains("fk_panel_video_revision_owner"));
     }
 
+    @Test
+    void shotStructureExpansionUsesANewFlywayMigrationAndKeepsFullLocalState() throws IOException {
+        Path migrationPath = REPOSITORY_ROOT.resolve(
+                "services/java-api/src/main/resources/db/migration/V4__expand_shot_structure.sql");
+
+        assertTrue(Files.exists(migrationPath), "Shot expansion must not rewrite an applied V3 migration");
+        String migration = Files.readString(migrationPath);
+        assertTrue(migration.contains("scene_index"));
+        assertTrue(migration.contains("environment_description"));
+        assertTrue(migration.contains("character_instances jsonb"));
+        assertTrue(migration.contains("prop_instances jsonb"));
+        assertTrue(migration.contains("end_state text"));
+        assertTrue(migration.contains("dialogues jsonb"));
+        assertTrue(migration.contains("camera_description text"));
+        assertTrue(migration.contains("audio_description text"));
+        assertTrue(migration.contains("continuity_locks jsonb"));
+        assertTrue(migration.contains("idx_shot_episode_scene_order"));
+    }
+
     private static String read(String relativePath) throws IOException {
         return Files.readString(REPOSITORY_ROOT.resolve(relativePath));
     }

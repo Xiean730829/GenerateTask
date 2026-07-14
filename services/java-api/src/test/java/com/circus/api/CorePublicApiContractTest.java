@@ -98,6 +98,21 @@ class CorePublicApiContractTest {
     }
 
     @Test
+    void shotResponseExposesTheCompleteLocalGenerationState() throws Exception {
+        String shotResponse = "com.circus.shot.api.dto.ShotResponse";
+
+        assertRecordComponent(shotResponse, "sceneIndex");
+        assertRecordComponent(shotResponse, "environmentDescription");
+        assertRecordComponent(shotResponse, "characterInstances");
+        assertRecordComponent(shotResponse, "propInstances");
+        assertRecordComponent(shotResponse, "endState");
+        assertRecordComponent(shotResponse, "dialogues");
+        assertRecordComponent(shotResponse, "cameraDescription");
+        assertRecordComponent(shotResponse, "audioDescription");
+        assertRecordComponent(shotResponse, "continuityLocks");
+    }
+
+    @Test
     void javaInterfacesCoverAllSixtyFrozenOpenApiOperations() {
         List<Class<?>> apiTypes = List.of(
                 com.circus.project.api.ProjectApi.class,
