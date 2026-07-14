@@ -1,0 +1,74 @@
+asyncapi: 3.0.0
+info:
+  title: Auto Drama Studio Task Messaging
+  version: 0.1.0
+  description: Immutable GenerationTask execution messages published by Java and consumed by Python Workers.
+defaultContentType: application/json
+servers:
+  rabbitmq:
+    host: localhost:5672
+    protocol: amqp
+    description: Java-to-Python internal task delivery.
+  episodeWebSocket:
+    host: localhost:8080
+    protocol: ws
+    description: React workstation task-update stream; MS1 uses a single demo-user context.
+channels:
+  taskExecution:
+    address: drama.task.execute
+    description: >-
+      Queue receiving task execution messages after a publisher confirm from the drama.tasks topic exchange.
+      消费方 ACK/NACK 规则见 x-consumer-ack-policy；不可恢复消息进入死信队列 drama.task.dlq。
+    x-rabbitmq:
+      exchange: drama.tasks
+      routingKey: task.execute
+      deadLetterQueue: drama.task.dlq
+    x-consumer-ack-policy:
+      onBusinessSucceeded: ACK —— 回写 succeeded 后确认。
+      onBusinessFailed: ACK —— 已回写 failed（失败已记录），消息可删除。
+      onUnrecoverableMessage: NACK(requeue=false) → DLQ —— 消息格式错误 / 不可恢复。
+      onTransientError: NACK(requeue=true) —— 网络异常 / 连接断开，重回队列重试。
+    messages:
+      taskExecution:
+        $ref: '#/components/messages/TaskExecution'
+  episodeTaskUpdates:
+    address: /api/ws/episodes/{episodeId}
+    description: >-
+      Java sends `task.updated` complete task snapshots for one Episode to the React workstation.
+      触发时机：handleCallback() 更新数据库后，通过 ApplicationEventPublisher.publishEvent(TaskUpdatedEvent) 推送。
+      断线重连后客户端用 GET /api/tasks/{taskId} 校正完整字段（WS 事件为精简快照，REST 为完整字段）。
+    parameters:
+      episodeId:
+        description: The Episode whose GenerationTask updates are streamed.
+    messages:
+      taskUpdated:
+        $ref: '#/components/messages/TaskUpdated'
+operations:
+  publishTaskExecution:
+    action: send
+    channel:
+      $ref: '#/channels/taskExecution'
+    summary: Publish an immutable task execution message after Java creates a GenerationTask.
+    messages:
+      - $ref: '#/channels/taskExecution/messages/taskExecution'
+  receiveEpisodeTaskUpdates:
+    action: receive
+    channel:
+      $ref: '#/channels/episodeTaskUpdates'
+    summary: Receive a complete GenerationTask snapshot after a state or progress update.
+    messages:
+      - $ref: '#/channels/episodeTaskUpdates/messages/taskUpdated'
+components:
+  messages:
+    TaskExecution:
+      name: TaskExecution
+      title: GenerationTask execution message
+      summary: A Java-owned task execution request. Workers must not create taskId, messageId or attempt values; payload includes immutable sourceText and projectConfig snapshots.
+      payload:
+        $ref: ../json-schema/generation-spec/task-execution.schema.json
+    TaskUpdated:
+      name: TaskUpdated
+      title: Episode GenerationTask update
+      summary: Full task snapshot; clients replace their local task by taskId and reconcile after reconnecting.
+      payload:
+        $ref: ../json-schema/generation-spec/task-updated-event.schema.json

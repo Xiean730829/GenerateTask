@@ -1,0 +1,16 @@
+# 本地云端凭据配置示例（可提交）。
+# 用法：复制为同目录下的 application-local.yml（该文件已被 .gitignore 忽略），
+# 填入真实凭据后以 SPRING_PROFILES_ACTIVE=local 启动。真实凭据严禁写入本示例文件。
+spring:
+  datasource:
+    url: jdbc:postgresql://<RDS_HOST>:5432/auto_drama
+    username: <DB_USERNAME>
+    password: "<DB_PASSWORD>"
+
+app:
+  oss:
+    bucket-name: <OSS_BUCKET_NAME>
+    region: <OSS_REGION>
+    endpoint: <OSS_ENDPOINT>
+    access-key-id: <OSS_ACCESS_KEY_ID>
+    access-key-secret: <OSS_ACCESS_KEY_SECRET>

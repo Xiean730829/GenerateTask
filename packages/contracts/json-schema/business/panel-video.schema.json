@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/business/panel-video.schema.json",
+  "title": "PanelVideo 剧情片段视频",
+  "description": "基于唯一 PanelRevision 生成的视频结果；其 Revision 失效后不得作为当前版本复用。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "panelId", "panelRevisionId", "status", "createdAt"],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "panelId": { "type": "string", "format": "uuid" },
+    "panelRevisionId": { "type": "string", "format": "uuid" },
+    "taskId": { "type": ["string", "null"], "format": "uuid" },
+    "mediaFileId": { "type": ["string", "null"], "format": "uuid" },
+    "mediaFile": {
+      "description": "关联媒体文件的可读视图（含 OSS 签名地址），便于前端直接预览片段视频；可空。",
+      "oneOf": [{ "type": "null" }, { "$ref": "media-file.schema.json" }]
+    },
+    "status": { "type": "string", "enum": ["pending", "running", "succeeded", "failed", "stale"] },
+    "createdAt": { "type": "string", "format": "date-time" }
+  }
+}

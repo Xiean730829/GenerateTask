@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/generation-spec/generated-script.schema.json",
+  "title": "GeneratedScript 剧本生成产物",
+  "description": "script.generate 任务的创作产物（叙事结构 + 可读剧本文本），不是库实体。Java 落库后转换为 business/script.schema.json 的 Script（补 id/episodeId/version/status 等库字段）。",
+  "$comment": "本 Schema 描述 Worker 输出的剧本内容结构；与库实体 Script（business/script.schema.json）分离，两者刻意不同。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "title",
+    "logline",
+    "storySummary",
+    "finalOutcome",
+    "characters",
+    "scenes",
+    "scriptText"
+  ],
+  "properties": {
+    "title": {
+      "description": "剧本标题",
+      "type": "string",
+      "minLength": 1
+    },
+    "logline": {
+      "description": "一句话剧情梗概",
+      "type": "string",
+      "minLength": 1
+    },
+    "storyPromise": {
+      "description": "故事承诺：观众将获得的核心体验。可空。",
+      "type": ["string", "null"]
+    },
+    "storySummary": {
+      "description": "剧情摘要",
+      "type": "string",
+      "minLength": 1
+    },
+    "finalOutcome": {
+      "description": "结局与主角最终选择",
+      "type": "string",
+      "minLength": 1
+    },
+    "targetDurationSeconds": {
+      "description": "目标时长（秒）。可空。",
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "language": {
+      "description": "语言标签，例如 zh-CN。可空。",
+      "type": ["string", "null"]
+    },
+    "genre": {
+      "description": "题材类型，例如 古风悬疑。可空。",
+      "type": ["string", "null"]
+    },
+    "style": {
+      "description": "整体视觉/叙事风格描述。可空。",
+      "type": ["string", "null"]
+    },
+    "characters": {
+      "description": "角色列表",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "narrativeRole", "description"],
+        "properties": {
+          "name": { "description": "角色名", "type": "string", "minLength": 1 },
+          "narrativeRole": { "description": "叙事角色定位，例如 失忆将军", "type": "string", "minLength": 1 },
+          "description": { "description": "外形与关键行为特征", "type": "string" },
+          "relationships": {
+            "description": "与其他角色的关系描述。可空。",
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "scenes": {
+      "description": "场景列表，按 sceneIndex 递增",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sceneIndex", "slugline", "purpose", "dramaticChange", "elements"],
+        "properties": {
+          "sceneIndex": { "description": "场景序号，从 1 开始", "type": "integer", "minimum": 1 },
+          "slugline": { "description": "场景标头，例如 INT｜边城军帐｜暴雨夜", "type": "string", "minLength": 1 },
+          "purpose": { "description": "本场目的", "type": "string" },
+          "dramaticChange": { "description": "本场发生的戏剧性转变", "type": "string" },
+          "environment": { "description": "环境描述。可空。", "type": ["string", "null"] },
+          "characterState": { "description": "人物出场状态与走位。可空。", "type": ["string", "null"] },
+          "elements": {
+            "description": "场景元素序列：动作或对白",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["type"],
+              "properties": {
+                "type": { "description": "元素类型：action 动作，dialogue 对白", "type": "string", "enum": ["action", "dialogue"] },
+                "content": { "description": "动作内容（type=action 必填）", "type": "string" },
+                "speaker": { "description": "说话人（type=dialogue 必填）", "type": "string" },
+                "performanceCue": { "description": "表演提示，例如 压低声音。可空。", "type": ["string", "null"] },
+                "text": { "description": "台词（type=dialogue 必填）", "type": "string" }
+              },
+              "allOf": [
+                {
+                  "$comment": "action：必须带 content。",
+                  "if": { "properties": { "type": { "const": "action" } }, "required": ["type"] },
+                  "then": { "required": ["content"] }
+                },
+                {
+                  "$comment": "dialogue：必须带 speaker 与 text。",
+                  "if": { "properties": { "type": { "const": "dialogue" } }, "required": ["type"] },
+                  "then": { "required": ["speaker", "text"] }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "scriptText": {
+      "description": "拼装后的可读剧本全文（供工作台展示与人工编辑）",
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

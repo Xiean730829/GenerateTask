@@ -1,0 +1,1943 @@
+openapi: 3.1.0
+info:
+  title: Auto Drama Studio Public API
+  version: 0.1.0
+  description: >-
+    Public product REST API consumed by the React web workstation (apps/web).
+    Scope is the frozen MS1 subset from Issue #6 section 18 ("MS1 最小必做 API"),
+    plus the task-status reads the frontend needs for polling, retry and cancel.
+
+    Conventions:
+      - All paths are prefixed with /api. Internal Worker callbacks live under
+        /internal (see openapi.yaml) and MUST NOT be called by the web client.
+      - Every response uses the envelope {success, data, error}. On success,
+        error is null; on failure, data is null and error carries code/message.
+      - Task-creating endpoints return 202 with the created GenerationTask.
+      - panels/assemble and timeline/compose are synchronous Java aggregations
+        (no matching taskType exists), so they return the object directly.
+      - Field names are camelCase; identifiers are UUID strings.
+      - 所有"创建任务"的 POST 接口接受可选请求头 Idempotency-Key（唯一范围：用户+接口+key）：
+        相同 key+相同请求返回原任务、不重复投递；相同 key+不同请求返回 409（error.code=IDEMPOTENCY_CONFLICT）。
+servers:
+  - url: http://localhost:8080
+    description: Local development (java-api)
+tags:
+  - name: projects
+    description: Project lifecycle and stage. (#6 §1)
+  - name: materials
+    description: Text/file input materials. (#6 §3)
+  - name: episodes
+    description: Episode listing. (#6 §2)
+  - name: scripts
+    description: Script generation and read. (#6 §5)
+  - name: shots
+    description: Shot generation, read and user-visible Prompt revisions. (#6 §6)
+  - name: keyframes
+    description: Shot keyframe generation, candidate selection and read. (MS1 media flow)
+  - name: assets
+    description: Simplified asset library. (#6 §7)
+  - name: panels
+    description: Panel aggregation. (#6 §8)
+  - name: videos
+    description: PanelRevision video generation. (#6 §10)
+  - name: audio-subtitle
+    description: Voiceover and subtitle generation. (#6 §11)
+  - name: timeline
+    description: Timeline composition and read. (#6 §12)
+  - name: exports
+    description: Final MP4 export and download. (#6 §13)
+  - name: media
+    description: 媒体文件读取（对象存储 OSS 签名地址），供关键帧/视频/参考图预览。
+  - name: tasks
+    description: GenerationTask status, retry and cancel. (#6 §14)
+
+paths:
+  # ---------------------------------------------------------------- projects
+  /api/projects:
+    post:
+      tags: [projects]
+      operationId: createProject
+      summary: Create a project (#6 §18.1)
+      description: >-
+        Creates a Project and its default Episode. When sourceText is provided,
+        the initial text SourceMaterial is created in the same transaction, so a
+        single call bootstraps the whole single-episode quick-create workspace.
+        MS1 defaults to a single-episode project.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+      responses:
+        '201':
+          description: Project (and default Episode, optional SourceMaterial) created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CreateProjectResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+    get:
+      tags: [projects]
+      operationId: listProjects
+      summary: List the current user's projects (#6 §1.2)
+      responses:
+        '200':
+          description: Project list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Project'
+
+  /api/projects/{projectId}:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [projects]
+      operationId: getProject
+      summary: Get project detail (#6 §1.3)
+      responses:
+        '200':
+          description: Project detail including current stage and defaultEpisodeId.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Project'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # --------------------------------------------------------------- materials
+  /api/projects/{projectId}/materials/text:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    post:
+      tags: [materials]
+      operationId: createTextMaterial
+      summary: Create a text input material (#6 §18.2)
+      description: Saves a one-sentence idea, outline or script fragment as a text SourceMaterial.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTextMaterialRequest'
+      responses:
+        '201':
+          description: SourceMaterial created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SourceMaterial'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/projects/{projectId}/materials:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [materials]
+      operationId: listProjectMaterials
+      summary: List a project's SourceMaterials
+      responses:
+        '200':
+          description: Source materials belonging to the project.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/SourceMaterial' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/materials/{materialId}:
+    parameters:
+      - $ref: '#/components/parameters/MaterialId'
+    get:
+      tags: [materials]
+      operationId: getMaterial
+      summary: Get a SourceMaterial
+      responses:
+        '200':
+          description: Source material.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/SourceMaterial' } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [materials]
+      operationId: updateMaterial
+      summary: Update a text SourceMaterial
+      description: Updating material marks the dependent Script and its downstream production results stale.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateSourceMaterialRequest' }
+      responses:
+        '200':
+          description: Updated source material.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/SourceMaterial' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- episodes
+  /api/projects/{projectId}/episodes:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [episodes]
+      operationId: listEpisodes
+      summary: List project episodes (#6 §2.1)
+      description: For single-episode quick-create there is exactly one default Episode.
+      responses:
+        '200':
+          description: Episode list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Episode'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/episodes/{episodeId}:
+    parameters:
+      - $ref: '#/components/parameters/EpisodeId'
+    get:
+      tags: [episodes]
+      operationId: getEpisode
+      summary: Get Episode workspace context
+      responses:
+        '200':
+          description: Episode detail.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/Episode' } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/episodes/{episodeId}/video-capability:
+    parameters:
+      - $ref: '#/components/parameters/EpisodeId'
+    get:
+      tags: [episodes]
+      operationId: getEpisodeVideoCapability
+      summary: Get server-selected video duration capability
+      description: The client uses this read-only capability to request Panel assembly; it must not hard-code model duration limits.
+      responses:
+        '200':
+          description: Current video capability and Panel duration constraints.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/VideoCapability' } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ----------------------------------------------------------------- scripts
+  /api/episodes/{episodeId}/script-tasks:
+    parameters:
+      - $ref: '#/components/parameters/EpisodeId'
+    post:
+      tags: [scripts]
+      operationId: createScriptTask
+      summary: Start a script generation task (#6 §18.3)
+      description: >-
+        Creates a script.generate GenerationTask that the Python worker consumes.
+        When sourceMaterialId is omitted, the episode's project source material is used.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScriptTaskRequest'
+      responses:
+        '202':
+          $ref: '#/components/responses/TaskAccepted'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/episodes/{episodeId}/script:
+    parameters:
+      - $ref: '#/components/parameters/EpisodeId'
+    get:
+      tags: [scripts]
+      operationId: getEpisodeScript
+      summary: Get the episode's current script (#6 §18.6)
+      description: 剧本尚未生成时返回 200 且 data 为 null（非 404）；404 仅表示分集不存在。
+      responses:
+        '200':
+          description: Current script, or null when it has not been generated yet.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        oneOf:
+                          - type: 'null'
+                          - $ref: '#/components/schemas/Script'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/scripts/{scriptId}:
+    parameters:
+      - $ref: '#/components/parameters/ScriptId'
+    get:
+      tags: [scripts]
+      operationId: getScript
+      summary: Get a script by identifier
+      responses:
+        '200':
+          description: Script detail.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/Script' } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [scripts]
+      operationId: updateScript
+      summary: Update the current script
+      description: Updating the script marks its Shots and all downstream production results stale.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateScriptRequest' }
+      responses:
+        '200':
+          description: Updated script.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/Script' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/scripts/{scriptId}/confirm:
+    parameters:
+      - $ref: '#/components/parameters/ScriptId'
+    post:
+      tags: [scripts]
+      operationId: confirmScriptAndGenerateShots
+      summary: Confirm a script and start shot generation
+      description: Confirms the current Script and queues its shot.generate GenerationTask.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202': { $ref: '#/components/responses/TaskAccepted' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  # ------------------------------------------------------------------- shots
+  /api/scripts/{scriptId}/shot-tasks:
+    parameters:
+      - $ref: '#/components/parameters/ScriptId'
+    post:
+      tags: [shots]
+      operationId: createShotTask
+      summary: Start a shot generation task (#6 §18.7)
+      description: Creates a shot.generate GenerationTask that splits the script into 3-5 shots.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShotTaskRequest'
+      responses:
+        '202':
+          $ref: '#/components/responses/TaskAccepted'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/episodes/{episodeId}/shots:
+    parameters:
+      - $ref: '#/components/parameters/EpisodeId'
+    get:
+      tags: [shots]
+      operationId: listEpisodeShots
+      summary: List an episode's shots (#6 §18.8)
+      responses:
+        '200':
+          description: Shot list ordered by orderIndex.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Shot'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/shots/{shotId}:
+    parameters:
+      - $ref: '#/components/parameters/ShotId'
+    get:
+      tags: [shots]
+      operationId: getShot
+      summary: Get a Shot
+      responses:
+        '200':
+          description: Shot detail with its current prompt pointer.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/Shot' } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [shots]
+      operationId: updateShot
+      summary: Update structural Shot fields
+      description: >-
+        Updates the Shot's non-Prompt fields. Prompt text is changed only through
+        POST /api/shots/{shotId}/prompt-revisions so that prompt provenance remains immutable.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateShotRequest' }
+      responses:
+        '200':
+          description: Updated Shot; dependent media is marked stale when applicable.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/Shot' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/shots/{shotId}/asset-overrides:
+    parameters:
+      - $ref: '#/components/parameters/ShotId'
+    get:
+      tags: [shots]
+      operationId: listShotAssetOverrides
+      summary: List a Shot's asset overrides
+      responses:
+        '200':
+          description: Asset overrides local to this Shot.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/ShotAssetOverride' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [shots]
+      operationId: createShotAssetOverride
+      summary: Attach an asset to the Shot or set a local attribute override
+      description: >-
+        attributes 省略即"仅关联该 Asset 到本镜头"；带 attributes 即在本镜头内设置属性覆盖。
+        只使本镜头及其下游媒体失效，不修改共享 Asset。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateShotAssetOverrideRequest' }
+      responses:
+        '201':
+          description: Immutable shot-local override.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/ShotAssetOverride' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/shots/{shotId}/asset-overrides/{assetId}:
+    parameters:
+      - $ref: '#/components/parameters/ShotId'
+      - $ref: '#/components/parameters/AssetId'
+    delete:
+      tags: [shots]
+      operationId: deleteShotAssetOverride
+      summary: Remove a Shot's asset override (detach the asset from this Shot)
+      description: 删除该镜头对指定 Asset 的关联/属性覆盖；只影响本镜头及其下游媒体，不改共享 Asset。
+      responses:
+        '200':
+          description: The override/association was removed.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        additionalProperties: false
+                        required: [shotId, assetId]
+                        properties:
+                          shotId: { type: string, format: uuid }
+                          assetId: { type: string, format: uuid }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/shots/{shotId}/assets:
+    parameters:
+      - $ref: '#/components/parameters/ShotId'
+    post:
+      tags: [shots]
+      operationId: createAssetForShot
+      summary: Create a new user Asset and attach it to the Shot
+      description: 为镜头新建一个用户级 Asset（角色/道具/场景/风格）并关联到该镜头。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateAssetForShotRequest' }
+      responses:
+        '201':
+          description: Newly created Asset.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/Asset' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/shots/{shotId}/keyframe-tasks:
+    parameters:
+      - $ref: '#/components/parameters/ShotId'
+    post:
+      tags: [keyframes]
+      operationId: createShotKeyframeTask
+      summary: Start a keyframe generation task for one Shot
+      description: >-
+        Queues keyframe.generate from the Shot's current PromptRevision and resolved
+        AssetRevision/ShotAssetOverride context. It never consumes mutable Asset state directly.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202': { $ref: '#/components/responses/TaskAccepted' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/episodes/{episodeId}/keyframe-tasks/batch:
+    parameters:
+      - $ref: '#/components/parameters/EpisodeId'
+    post:
+      tags: [keyframes]
+      operationId: createEpisodeKeyframeTasks
+      summary: Start keyframe generation for the next batch of Shots
+      description: >-
+        省略 shotIds 时由服务端挑选下一批（最多 9 个）待生成关键帧的镜头，创建单个 keyframe.generate
+        任务，并返回该任务与本批覆盖的 shotIds。
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/KeyframeBatchRequest' }
+      responses:
+        '202':
+          description: A single keyframe.generate task covering the next batch of Shots was queued.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/KeyframeBatchResult' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/episodes/{episodeId}/keyframes:
+    parameters:
+      - $ref: '#/components/parameters/EpisodeId'
+    get:
+      tags: [keyframes]
+      operationId: listEpisodeKeyframes
+      summary: List an Episode's keyframe candidates
+      responses:
+        '200':
+          description: Keyframe candidates grouped by Shot by the client.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Keyframe' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/keyframes/{keyframeId}/select:
+    parameters:
+      - $ref: '#/components/parameters/KeyframeId'
+    post:
+      tags: [keyframes]
+      operationId: selectKeyframe
+      summary: Select a keyframe candidate for its Shot
+      description: Selecting a candidate updates subsequent PanelRevision assembly input only; it does not mutate past revisions.
+      responses:
+        '200':
+          description: Selected keyframe.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/Keyframe' } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/shots/{shotId}/prompt-revisions:
+    parameters:
+      - $ref: '#/components/parameters/ShotId'
+    get:
+      tags: [shots]
+      operationId: listShotPromptRevisions
+      summary: List a shot's Prompt revision history
+      responses:
+        '200':
+          description: Immutable Prompt revisions in descending revision order.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/ShotPromptRevision'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [shots]
+      operationId: createShotPromptRevision
+      summary: Create a user-visible Prompt revision
+      description: >-
+        Manual editing creates a new immutable ShotPromptRevision and marks only
+        this Shot's dependent keyframes, PanelRevisions and PanelVideos stale.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateShotPromptRevisionRequest'
+      responses:
+        '201':
+          description: Prompt revision created.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ShotPromptRevision'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ------------------------------------------------------------------ assets
+  /api/projects/{projectId}/asset-extract-tasks:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    post:
+      tags: [assets]
+      operationId: createAssetExtractTask
+      summary: Start an asset extraction task (#6 §18.9)
+      description: >-
+        Creates an asset.extract GenerationTask that derives character/scene/style
+        asset needs from the episode's shots. Character voice settings are attributes of
+        character Assets, not independent Assets. episodeId is required in MS1: every task must
+        associate the current production Episode (see Issue #10 clarification).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssetExtractTaskRequest'
+      responses:
+        '202':
+          $ref: '#/components/responses/TaskAccepted'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/projects/{projectId}/assets:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [assets]
+      operationId: listProjectAssets
+      summary: List assets referenced by the project (#6 §18.10)
+      description: >-
+        Returns the user-level Assets referenced by the project via AssetReference.
+        A project does not own Assets; it references them.
+      parameters:
+        - name: type
+          in: query
+          required: false
+          description: Optional filter by asset type.
+          schema:
+            $ref: '#/components/schemas/AssetType'
+      responses:
+        '200':
+          description: Referenced asset list.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Asset'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/assets:
+    get:
+      tags: [assets]
+      operationId: listUserAssets
+      summary: List the current user's asset library
+      parameters:
+        - name: type
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/AssetType' }
+      responses:
+        '200':
+          description: User-level reusable assets.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Asset' }
+
+  /api/assets/{assetId}:
+    parameters:
+      - $ref: '#/components/parameters/AssetId'
+    get:
+      tags: [assets]
+      operationId: getAsset
+      summary: Get an Asset
+      responses:
+        '200':
+          description: Asset detail.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/Asset' } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [assets]
+      operationId: updateAsset
+      summary: Update an Asset by creating a new current revision
+      description: >-
+        This request never mutates historical AssetRevision data. It creates a new revision;
+        shared downstream application remains an explicit action through the revision apply endpoint.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateAssetRequest' }
+      responses:
+        '200':
+          description: Updated Asset (with its newly created current revision pointer).
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/Asset' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/assets/{assetId}/reference-image-tasks:
+    parameters:
+      - $ref: '#/components/parameters/AssetId'
+    post:
+      tags: [assets]
+      operationId: createAssetReferenceImageTask
+      summary: Start reference-image generation for an Asset
+      description: Queues asset.image.generate using the Asset's current immutable revision.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202': { $ref: '#/components/responses/TaskAccepted' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/assets/{assetId}/reference-images:
+    parameters:
+      - $ref: '#/components/parameters/AssetId'
+    get:
+      tags: [assets]
+      operationId: listAssetReferenceImages
+      summary: List an Asset's reference-image candidates
+      description: >-
+        Returns the generated candidate images (each an OSS-backed MediaFile) so the client
+        can preview them before calling confirm with the chosen mediaFileId.
+      responses:
+        '200':
+          description: Candidate reference images for the Asset.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/MediaFile' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/assets/{assetId}/reference-images/{mediaFileId}/confirm:
+    parameters:
+      - $ref: '#/components/parameters/AssetId'
+      - $ref: '#/components/parameters/MediaFileId'
+    post:
+      tags: [assets]
+      operationId: confirmAssetReferenceImage
+      summary: Confirm an Asset reference-image candidate
+      responses:
+        '200':
+          description: Asset reference image selection confirmed.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/Asset' } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/assets/{assetId}/revisions:
+    parameters:
+      - $ref: '#/components/parameters/AssetId'
+    post:
+      tags: [assets]
+      operationId: createAssetRevision
+      summary: Freeze the Asset's current attributes into a new immutable revision
+      description: >-
+        省略 attributes 即把 Asset 当前属性快照为新的不可变 revision 并返回更新后的 Asset；
+        创建 revision 本身不改动任何 Shot。将 revision 应用到共享下游 Shot 是单独的 apply 步骤。
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAssetRevisionRequest'
+      responses:
+        '201':
+          description: Updated Asset with its new current revision.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/Asset' } }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/assets/{assetId}/revisions/{revisionId}/apply:
+    parameters:
+      - $ref: '#/components/parameters/AssetId'
+      - $ref: '#/components/parameters/RevisionId'
+    post:
+      tags: [assets]
+      operationId: applyAssetRevision
+      summary: Apply a shared Asset revision to selected Shots
+      description: >-
+        Only selected Shots are invalidated. Their affected keyframes, PanelRevisions
+        and PanelVideos become stale; unrelated Shots remain unchanged.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplyAssetRevisionRequest'
+      responses:
+        '200':
+          description: Revision was applied to the selected scope.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AssetRevisionImpact'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ------------------------------------------------------------------ panels
+  /api/episodes/{episodeId}/panels:
+    parameters:
+      - $ref: '#/components/parameters/EpisodeId'
+    get:
+      tags: [panels]
+      operationId: listEpisodePanels
+      summary: List an Episode's panels and current revision pointers
+      responses:
+        '200':
+          description: Panels ordered for the current Episode.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Panel' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/episodes/{episodeId}/panels/assemble:
+    parameters:
+      - $ref: '#/components/parameters/EpisodeId'
+    post:
+      tags: [panels]
+      operationId: assemblePanels
+      summary: Assemble shots into panels (#6 §18.11)
+      description: >-
+        Synchronous Java aggregation of shots into panels by TimeSpec. There is no
+        panel.* taskType, so this returns the assembled panels directly rather than a task.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PanelAssembleRequest'
+      responses:
+        '200':
+          description: Assembled panels.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Panel'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  # ------------------------------------------------------------------ videos
+  /api/panels/{panelId}/video-tasks:
+    parameters:
+      - $ref: '#/components/parameters/PanelId'
+    post:
+      tags: [videos]
+      operationId: createPanelVideoTask
+      summary: Start PanelRevision video generation (#6 §18.12)
+      description: >-
+        Creates a video.generate GenerationTask from the Panel's current immutable
+        PanelRevision. A PanelVideo must never read mutable Shot or Asset state directly.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PanelVideoTaskRequest'
+      responses:
+        '202':
+          $ref: '#/components/responses/TaskAccepted'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/episodes/{episodeId}/panel-video-tasks/batch:
+    parameters:
+      - $ref: '#/components/parameters/EpisodeId'
+    post:
+      tags: [videos]
+      operationId: createEpisodePanelVideoTasks
+      summary: Start PanelRevision video tasks for the Episode's selected panels
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PanelVideoBatchRequest' }
+      responses:
+        '202':
+          description: One video.generate task per eligible Panel current revision.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/PanelVideoBatchResult' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/panels/{panelId}/videos:
+    parameters:
+      - $ref: '#/components/parameters/PanelId'
+    get:
+      tags: [videos]
+      operationId: listPanelVideos
+      summary: List a Panel's video results
+      responses:
+        '200':
+          description: Videos grouped by immutable PanelRevision.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/PanelVideo' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/episodes/{episodeId}/panel-videos:
+    parameters:
+      - $ref: '#/components/parameters/EpisodeId'
+    get:
+      tags: [videos]
+      operationId: listEpisodePanelVideos
+      summary: List an Episode's Panel video results
+      responses:
+        '200':
+          description: Panel videos belonging to this Episode.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/PanelVideo' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/panels/{panelId}/videos/regenerate:
+    parameters:
+      - $ref: '#/components/parameters/PanelId'
+    post:
+      tags: [videos]
+      operationId: regeneratePanelVideo
+      summary: Regenerate video from the Panel's current revision
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202': { $ref: '#/components/responses/TaskAccepted' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/panels/{panelId}/videos/confirm:
+    parameters:
+      - $ref: '#/components/parameters/PanelId'
+    post:
+      tags: [videos]
+      operationId: confirmPanelVideo
+      summary: Confirm the Panel's selected video result
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConfirmPanelVideoRequest' }
+      responses:
+        '200':
+          description: Confirmed Panel video.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/PanelVideo' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  # ---------------------------------------------------------- audio-subtitle
+  /api/episodes/{episodeId}/audio-subtitle-tasks:
+    parameters:
+      - $ref: '#/components/parameters/EpisodeId'
+    post:
+      tags: [audio-subtitle]
+      operationId: createAudioSubtitleTask
+      summary: Start episode voiceover + subtitle task (#6 §18.13)
+      description: Creates an audio.subtitle GenerationTask for the whole episode.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AudioSubtitleTaskRequest'
+      responses:
+        '202':
+          $ref: '#/components/responses/TaskAccepted'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  # ---------------------------------------------------------------- timeline
+  /api/episodes/{episodeId}/timeline/compose:
+    parameters:
+      - $ref: '#/components/parameters/EpisodeId'
+    post:
+      tags: [timeline]
+      operationId: composeTimeline
+      summary: Compose the episode timeline (#6 §18.14)
+      description: >-
+        Synchronous Java assembly of video/audio/subtitle tracks from existing results
+        into a Timeline. There is no timeline.* taskType; the async ffmpeg render happens
+        later at export time via export.compose.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TimelineComposeRequest'
+      responses:
+        '200':
+          description: Composed timeline.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Timeline'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/episodes/{episodeId}/timeline:
+    parameters:
+      - $ref: '#/components/parameters/EpisodeId'
+    get:
+      tags: [timeline]
+      operationId: getEpisodeTimeline
+      summary: Get the episode's current timeline (#6 §12.2)
+      description: 时间线尚未合成时返回 200 且 data 为 null（非 404）；404 仅表示分集不存在。
+      responses:
+        '200':
+          description: Current timeline, or null when it has not been composed yet.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        oneOf:
+                          - type: 'null'
+                          - $ref: '#/components/schemas/Timeline'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----------------------------------------------------------------- exports
+  /api/timelines/{timelineId}/exports:
+    parameters:
+      - $ref: '#/components/parameters/TimelineId'
+    get:
+      tags: [exports]
+      operationId: listTimelineExports
+      summary: List a Timeline's exports
+      responses:
+        '200':
+          description: Exports created from this Timeline.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Export' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [exports]
+      operationId: createExport
+      summary: Start a final MP4 export (#6 §18.15)
+      description: >-
+        Creates an Export record and its backing export.compose GenerationTask, and returns
+        the task (202). Poll the task, then fetch the Export via GET /api/exports/{exportId}.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExportRequest'
+      responses:
+        '202':
+          $ref: '#/components/responses/TaskAccepted'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/exports/{exportId}:
+    parameters:
+      - $ref: '#/components/parameters/ExportId'
+    get:
+      tags: [exports]
+      operationId: getExport
+      summary: Get export status and file info (#6 §18.16)
+      responses:
+        '200':
+          description: Export status, file location, resolution, format and duration.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Export'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/exports/{exportId}/download:
+    parameters:
+      - $ref: '#/components/parameters/ExportId'
+    get:
+      tags: [exports]
+      operationId: downloadExport
+      summary: Download the final video (#6 §18.17)
+      description: >-
+        Redirects to a short-lived signed object-storage (Aliyun OSS) URL for the exported MP4.
+        The binary is never streamed through Postgres or served from a local path.
+      responses:
+        '302':
+          description: Redirect to a signed object-storage URL.
+          headers:
+            Location:
+              description: Signed, time-limited URL to the MP4 object.
+              schema:
+                type: string
+                format: uri
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Export is not yet in a downloadable (succeeded) state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+
+  # ------------------------------------------------------------------- media
+  /api/media-files/{mediaFileId}:
+    parameters:
+      - $ref: '#/components/parameters/MediaFileId'
+    get:
+      tags: [media]
+      operationId: getMediaFile
+      summary: Get a media file with a fresh signed URL
+      description: >-
+        Resolves a mediaFileId (as carried by Keyframe, PanelVideo, subtitle/audio, etc.)
+        into a MediaFile with a short-lived OSS signed URL. Use this to refresh a URL
+        that has expired since it was embedded in a list response.
+      responses:
+        '200':
+          description: Media file metadata and a signed access URL.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties: { data: { $ref: '#/components/schemas/MediaFile' } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ------------------------------------------------------------------- tasks
+  /api/tasks/{taskId}:
+    parameters:
+      - $ref: '#/components/parameters/TaskId'
+    get:
+      tags: [tasks]
+      operationId: getTask
+      summary: Get a GenerationTask status (#6 §18.4 / §14.1)
+      description: Primary polling endpoint. The web client polls this every 2 seconds.
+      responses:
+        '200':
+          description: Task status, progress, error and result reference.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/GenerationTask'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/projects/{projectId}/tasks:
+    parameters:
+      - $ref: '#/components/parameters/ProjectId'
+    get:
+      tags: [tasks]
+      operationId: listProjectTasks
+      summary: List a project's tasks (#6 §14.2)
+      responses:
+        '200':
+          description: Task list for the project.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/GenerationTask'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/episodes/{episodeId}/tasks:
+    parameters:
+      - $ref: '#/components/parameters/EpisodeId'
+    get:
+      tags: [tasks]
+      operationId: listEpisodeTasks
+      summary: List an Episode's GenerationTasks
+      description: The workstation uses this endpoint to restore task cards after a page reload.
+      responses:
+        '200':
+          description: Task list for the Episode.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/GenerationTask' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/tasks/{taskId}/retry:
+    parameters:
+      - $ref: '#/components/parameters/TaskId'
+    post:
+      tags: [tasks]
+      operationId: retryTask
+      summary: Retry a failed task (#6 §14.5)
+      description: >-
+        Allowed only from failed. Produces a new attempt; stale callbacks from the old
+        attempt are ignored by the task module. 当 retryable=false 或 retry_count 已达
+        maxRetries（默认 3）时拒绝重试（409），此时用户只能 cancel。
+      responses:
+        '202':
+          $ref: '#/components/responses/TaskAccepted'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Task is not in a retryable state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+
+  /api/tasks/{taskId}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/TaskId'
+    post:
+      tags: [tasks]
+      operationId: cancelTask
+      summary: Cancel a task (#6 §14.6)
+      description: >-
+        Cancels a pending, queued or failed task. MS1 does not support cancelling a
+        running task. After cancellation, any late success/failure callback is ignored.
+      responses:
+        '202':
+          $ref: '#/components/responses/TaskAccepted'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Task cannot be cancelled from its current state (e.g. running or terminal).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+
+components:
+  parameters:
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    EpisodeId:
+      name: episodeId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ScriptId:
+      name: scriptId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ShotId:
+      name: shotId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    MaterialId:
+      name: materialId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    AssetId:
+      name: assetId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    RevisionId:
+      name: revisionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    PanelId:
+      name: panelId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    KeyframeId:
+      name: keyframeId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    MediaFileId:
+      name: mediaFileId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    TimelineId:
+      name: timelineId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ExportId:
+      name: exportId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: 幂等键。相同 key+相同请求返回原任务、不重复投递；相同 key+不同请求返回 409（error.code=IDEMPOTENCY_CONFLICT）。适用于全部创建任务的 POST。
+      schema: { type: string, minLength: 1, maxLength: 200 }
+
+  responses:
+    TaskAccepted:
+      description: The GenerationTask was created and queued.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessEnvelope'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/GenerationTask'
+    BadRequest:
+      description: The request body failed validation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    NotFound:
+      description: The referenced resource does not exist.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Conflict:
+      description: The request conflicts with the current state of the resource.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+
+  schemas:
+    # -------- response envelope --------
+    SuccessEnvelope:
+      type: object
+      additionalProperties: false
+      required: [success, data, error]
+      properties:
+        success: { const: true }
+        data: {}
+        error: { type: 'null' }
+    ErrorEnvelope:
+      type: object
+      additionalProperties: false
+      required: [success, data, error]
+      properties:
+        success: { const: false }
+        data: { type: 'null' }
+        error: { $ref: '#/components/schemas/ApiError' }
+    ApiError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: Stable machine-readable error code (e.g. IDEMPOTENCY_CONFLICT). 完整清单见 packages/contracts/error-codes.md。
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+    # -------- enums --------
+    ProjectType:
+      type: string
+      description: MS1 defaults to single_episode.
+      enum: [single_episode, full_series]
+    # 说明：业务对象的枚举（ProjectStage / MaterialType / ScriptStatus / TaskType /
+    # TaskStatus / ExportStatus）已随各业务对象抽取到 json-schema/business/ 内联定义。
+    # 此处仅保留公开请求体或查询参数仍需引用的枚举，取值必须与业务 Schema 保持一致。
+    AssetType:
+      type: string
+      description: 素材类型过滤枚举，取值与 business/asset.schema.json 保持一致。
+      enum: [character, prop, scene, style]
+
+    # -------- 业务对象 --------
+    # 业务对象已抽取为独立的 JSON Schema 文件（packages/contracts/json-schema/business/），
+    # 作为业务对象唯一定义来源，同时供 Python Worker 回写校验复用。此处统一通过 $ref 引用，避免重复维护。
+    Project:
+      $ref: ../json-schema/business/project.schema.json
+    Episode:
+      $ref: ../json-schema/business/episode.schema.json
+    SourceMaterial:
+      $ref: ../json-schema/business/source-material.schema.json
+    Script:
+      $ref: ../json-schema/business/script.schema.json
+    Shot:
+      $ref: ../json-schema/business/shot.schema.json
+    Asset:
+      $ref: ../json-schema/business/asset.schema.json
+    AssetReference:
+      $ref: ../json-schema/business/asset-reference.schema.json
+    AssetRevision:
+      $ref: ../json-schema/business/asset-revision.schema.json
+    ShotAssetOverride:
+      $ref: ../json-schema/business/shot-asset-override.schema.json
+    ShotPromptRevision:
+      $ref: ../json-schema/business/shot-prompt-revision.schema.json
+    Keyframe:
+      $ref: ../json-schema/business/keyframe.schema.json
+    MediaFile:
+      $ref: ../json-schema/business/media-file.schema.json
+    Panel:
+      $ref: ../json-schema/business/panel.schema.json
+    PanelRevision:
+      $ref: ../json-schema/business/panel-revision.schema.json
+    PanelVideo:
+      $ref: ../json-schema/business/panel-video.schema.json
+    Timeline:
+      $ref: ../json-schema/business/timeline.schema.json
+    Export:
+      $ref: ../json-schema/business/export.schema.json
+    GenerationTask:
+      $ref: ../json-schema/business/generation-task.schema.json
+
+    # -------- request bodies --------
+    CreateProjectRequest:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1 }
+        projectType:
+          allOf: [{ $ref: '#/components/schemas/ProjectType' }]
+          default: single_episode
+        targetDurationSeconds: { type: integer, minimum: 1, default: 60 }
+        aspectRatio: { type: string, default: '9:16' }
+        style: { type: [string, 'null'] }
+        sourceText:
+          type: [string, 'null']
+          description: >-
+            Optional one-sentence idea. When present, an initial text SourceMaterial is
+            created together with the project and default episode.
+    CreateProjectResult:
+      type: object
+      additionalProperties: false
+      required: [project, defaultEpisode]
+      properties:
+        project: { $ref: '#/components/schemas/Project' }
+        defaultEpisode: { $ref: '#/components/schemas/Episode' }
+        sourceMaterial:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/SourceMaterial'
+    CreateTextMaterialRequest:
+      type: object
+      additionalProperties: false
+      required: [text]
+      properties:
+        text: { type: string, minLength: 1 }
+        title: { type: [string, 'null'] }
+    UpdateSourceMaterialRequest:
+      type: object
+      additionalProperties: false
+      required: [text]
+      properties:
+        text: { type: string, minLength: 1 }
+        title: { type: [string, 'null'] }
+    VideoCapability:
+      type: object
+      additionalProperties: false
+      required: [minPanelDurationSeconds, maxPanelDurationSeconds, supportedDurationsSeconds]
+      properties:
+        minPanelDurationSeconds: { type: integer, minimum: 1 }
+        maxPanelDurationSeconds: { type: integer, minimum: 1 }
+        supportedDurationsSeconds:
+          type: array
+          minItems: 1
+          items: { type: integer, minimum: 1 }
+    ScriptTaskRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        sourceMaterialId:
+          type: [string, 'null']
+          format: uuid
+          description: Defaults to the project's source material when omitted.
+    ShotTaskRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        targetShotCount:
+          type: [integer, 'null']
+          minimum: 3
+          maximum: 5
+          description: Optional hint; the worker still targets 3-5 shots.
+    UpdateScriptRequest:
+      type: object
+      additionalProperties: false
+      required: [content]
+      properties:
+        content: { type: string, minLength: 1 }
+    UpdateShotRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        durationSeconds: { type: number, exclusiveMinimum: 0 }
+        shotSize: { type: [string, 'null'] }
+        cameraMovement: { type: [string, 'null'] }
+        action: { type: [string, 'null'] }
+        dialogue: { type: [string, 'null'] }
+    AssetExtractTaskRequest:
+      type: object
+      additionalProperties: false
+      required: [episodeId]
+      properties:
+        episodeId:
+          type: string
+          format: uuid
+          description: Required in MS1 — the current production episode the task belongs to.
+        shotId:
+          type: [string, 'null']
+          format: uuid
+          description: 可选。指定后将资产抽取范围限定到该镜头，否则覆盖分集全部镜头。
+    PanelAssembleRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        timeSpec:
+          type: object
+          additionalProperties: true
+          description: Optional aggregation spec (e.g. max panel duration).
+    CreateShotPromptRevisionRequest:
+      type: object
+      additionalProperties: false
+      required: [prompt]
+      properties:
+        prompt:
+          type: string
+          minLength: 1
+        assetOverrides:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [assetId, attributes]
+            properties:
+              assetId: { type: string, format: uuid }
+              attributes: { type: object, additionalProperties: true }
+    CreateShotAssetOverrideRequest:
+      type: object
+      additionalProperties: false
+      required: [assetId]
+      properties:
+        assetId: { type: string, format: uuid }
+        attributes:
+          type: object
+          additionalProperties: true
+          description: 省略即仅关联该 Asset 到本镜头；提供则为镜头内属性覆盖。
+    KeyframeBatchRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        shotIds:
+          type: array
+          minItems: 1
+          maxItems: 9
+          uniqueItems: true
+          items: { type: string, format: uuid }
+          description: 省略即由服务端挑选下一批（最多 9 个）待生成关键帧的镜头。
+    KeyframeBatchResult:
+      type: object
+      additionalProperties: false
+      required: [task, shotIds]
+      properties:
+        task: { $ref: '#/components/schemas/GenerationTask' }
+        shotIds:
+          type: array
+          items: { type: string, format: uuid }
+          description: 本次任务覆盖的镜头。
+    CreateAssetRevisionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        attributes:
+          type: object
+          additionalProperties: true
+          description: 省略即快照 Asset 当前属性为新 revision；提供则以该属性创建新 revision。
+    CreateAssetForShotRequest:
+      type: object
+      additionalProperties: false
+      required: [type, name, description]
+      properties:
+        type: { $ref: '#/components/schemas/AssetType' }
+        name: { type: string, minLength: 1 }
+        description: { type: string }
+    UpdateAssetRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1 }
+        description: { type: [string, 'null'] }
+        voice:
+          type: object
+          additionalProperties: true
+          description: 角色音色（character 专用），服务端合并进 attributes.voice。
+        attributes: { type: object, additionalProperties: true }
+    ApplyAssetRevisionRequest:
+      type: object
+      additionalProperties: false
+      required: [shotIds]
+      properties:
+        shotIds:
+          type: array
+          minItems: 1
+          items: { type: string, format: uuid }
+    AssetRevisionImpact:
+      type: object
+      additionalProperties: false
+      required: [revision, affectedShotIds, stalePanelRevisionIds, stalePanelVideoIds]
+      properties:
+        revision: { $ref: '#/components/schemas/AssetRevision' }
+        affectedShotIds:
+          type: array
+          items: { type: string, format: uuid }
+        stalePanelRevisionIds:
+          type: array
+          items: { type: string, format: uuid }
+        stalePanelVideoIds:
+          type: array
+          items: { type: string, format: uuid }
+    PanelVideoTaskRequest:
+      type: object
+      additionalProperties: false
+      properties: {}
+    PanelVideoBatchRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        panelIds:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { type: string, format: uuid }
+          description: When omitted, the server queues every eligible Panel current revision in the Episode.
+    PanelVideoBatchResult:
+      type: object
+      additionalProperties: false
+      required: [tasks]
+      properties:
+        tasks:
+          type: array
+          items: { $ref: '#/components/schemas/GenerationTask' }
+    ConfirmPanelVideoRequest:
+      type: object
+      additionalProperties: false
+      required: [panelVideoId]
+      properties:
+        panelVideoId: { type: string, format: uuid }
+    AudioSubtitleTaskRequest:
+      type: object
+      additionalProperties: false
+      properties: {}
+    TimelineComposeRequest:
+      type: object
+      additionalProperties: false
+      properties: {}
+    CreateExportRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        format: { type: string, default: mp4 }
+        resolution: { type: [string, 'null'], description: 'e.g. 1080x1920.' }

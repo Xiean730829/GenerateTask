@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/business/episode.schema.json",
+  "title": "Episode 分集",
+  "description": "单集生产容器。Script、Shot、Panel、Timeline 都归属于 Episode。单集快创默认只有一个 Episode。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "projectId", "orderIndex", "status", "createdAt", "updatedAt"],
+  "properties": {
+    "id": {
+      "description": "分集唯一标识",
+      "type": "string",
+      "format": "uuid"
+    },
+    "projectId": {
+      "description": "所属项目 ID",
+      "type": "string",
+      "format": "uuid"
+    },
+    "title": {
+      "description": "分集标题，可空",
+      "type": ["string", "null"]
+    },
+    "synopsis": {
+      "description": "分集简介，可空",
+      "type": ["string", "null"]
+    },
+    "orderIndex": {
+      "description": "分集在项目内的排序序号，从 0 开始",
+      "type": "integer",
+      "minimum": 0
+    },
+    "targetDurationSeconds": {
+      "description": "分集目标时长（秒），可空",
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "status": {
+      "description": "分集生产状态",
+      "type": "string"
+    },
+    "createdAt": {
+      "description": "创建时间",
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "description": "最后更新时间",
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

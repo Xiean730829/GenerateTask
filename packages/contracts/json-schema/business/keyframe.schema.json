@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/business/keyframe.schema.json",
+  "title": "Keyframe 镜头关键帧",
+  "description": "由 keyframe.generate 任务生成的单个 Shot 候选画面。用户选择 selected 候选后，PanelRevision 才能固定其媒体快照。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "shotId", "mediaFileId", "status", "createdAt"],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "shotId": { "type": "string", "format": "uuid" },
+    "mediaFileId": { "type": "string", "format": "uuid" },
+    "mediaFile": {
+      "description": "关联媒体文件的可读视图（含 OSS 签名地址），便于前端直接预览候选关键帧；可空。",
+      "oneOf": [{ "type": "null" }, { "$ref": "media-file.schema.json" }]
+    },
+    "status": { "type": "string", "enum": ["candidate", "selected", "rejected", "stale"] },
+    "promptRevisionId": { "type": ["string", "null"], "format": "uuid" },
+    "createdAt": { "type": "string", "format": "date-time" }
+  }
+}

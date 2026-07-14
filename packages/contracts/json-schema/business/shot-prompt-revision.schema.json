@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/business/shot-prompt-revision.schema.json",
+  "title": "ShotPromptRevision 镜头提示词版本",
+  "description": "用户可见、可编辑且不可变的镜头提示词版本；关键帧生成只能使用明确选定的版本。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "shotId", "revisionNo", "prompt", "source", "createdAt"],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "shotId": { "type": "string", "format": "uuid" },
+    "revisionNo": { "type": "integer", "minimum": 1 },
+    "prompt": { "type": "string", "minLength": 1 },
+    "source": { "type": "string", "enum": ["generated", "manual", "assistant"] },
+    "assetReferenceIds": { "type": "array", "items": { "type": "string", "format": "uuid" } },
+    "assetOverrides": { "type": "array", "items": { "$ref": "shot-asset-override.schema.json" } },
+    "createdAt": { "type": "string", "format": "date-time" }
+  }
+}

@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/business/generation-task.schema.json",
+  "title": "GenerationTask 生成任务",
+  "description": "任务控制对象（非内容对象）。负责控制异步生产过程，关联源对象与结果对象。Java 是任务状态的唯一拥有者。",
+  "$comment": "状态机与回写幂等规则见 Issue #8：attempt 校验、终态（succeeded/canceled）不可覆盖。枚举取值须与 Issue #10 §3.2/§3.3 保持一致。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "projectId",
+    "episodeId",
+    "taskType",
+    "status",
+    "attempt",
+    "progress",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": {
+      "description": "任务唯一标识",
+      "type": "string",
+      "format": "uuid"
+    },
+    "projectId": {
+      "description": "所属项目 ID",
+      "type": "string",
+      "format": "uuid"
+    },
+    "episodeId": {
+      "description": "所属分集 ID。MS1 要求所有任务必须关联当前生产 Episode（见 Issue #10 补充说明）。",
+      "type": "string",
+      "format": "uuid"
+    },
+    "shotId": {
+      "description": "关联镜头 ID，可空",
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "panelId": {
+      "description": "关联剧情片段 ID，可空",
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "taskType": {
+      "description": "任务类型（名词.动词），见 Issue #10 §3.3",
+      "type": "string",
+      "enum": [
+        "script.generate",
+        "shot.generate",
+        "asset.extract",
+        "asset.image.generate",
+        "keyframe.generate",
+        "video.generate",
+        "audio.subtitle",
+        "export.compose"
+      ]
+    },
+    "status": {
+      "description": "任务状态（全小写），见 Issue #10 §3.2",
+      "type": "string",
+      "enum": [
+        "pending",
+        "queued",
+        "running",
+        "succeeded",
+        "failed",
+        "retrying",
+        "canceled"
+      ]
+    },
+    "attempt": {
+      "description": "执行编号。taskId + attempt 唯一标识一次执行；Java 只接受当前有效 attempt 的回写。",
+      "type": "integer",
+      "minimum": 0
+    },
+    "progress": {
+      "description": "进度百分比（0-100）",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "errorCode": {
+      "description": "失败时的机器可读错误码，可空",
+      "type": ["string", "null"]
+    },
+    "errorMessage": {
+      "description": "失败时的错误描述，可空",
+      "type": ["string", "null"]
+    },
+    "retryable": {
+      "description": "失败是否允许进入重试流程。失败以外的状态为 null。",
+      "type": ["boolean", "null"]
+    },
+    "resultRef": {
+      "description": "结果对象引用，例如 { scriptId: ... }。可空。",
+      "type": ["object", "null"],
+      "additionalProperties": true
+    },
+    "costPoints": {
+      "description": "任务消耗积分。MS1 只保留字段，不做完整积分结算。",
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "createdAt": {
+      "description": "创建时间",
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "description": "最后更新时间",
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}
