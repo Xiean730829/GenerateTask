@@ -129,7 +129,7 @@ class TaskFlowSkeletonTest {
 
         @Override
         public TaskDispatch createPending(CreateTaskCommand command) {
-            return new TaskDispatch(UUID.randomUUID(), command, 0, "skeleton-trace", Instant.now());
+            return new TaskDispatch(UUID.randomUUID(), UUID.randomUUID(), command, 0, "skeleton-trace", Instant.now());
         }
 
         @Override

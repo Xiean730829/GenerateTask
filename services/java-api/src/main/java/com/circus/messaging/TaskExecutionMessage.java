@@ -21,9 +21,4 @@ public record TaskExecutionMessage(
         Instant createdAt,
         JsonNode payload) {
 
-    /** 返回带派发身份的新快照；record 本身不被原地修改。 */
-    public TaskExecutionMessage withMessageId(UUID generatedMessageId) {
-        return new TaskExecutionMessage(generatedMessageId, taskId, taskType, projectId, episodeId, shotId,
-                panelId, attempt, traceId, createdAt, payload);
-    }
 }

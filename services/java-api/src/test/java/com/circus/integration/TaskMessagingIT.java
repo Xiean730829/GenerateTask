@@ -21,42 +21,28 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
-import org.testcontainers.containers.RabbitMQContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 /** RabbitMQ 实例级验收：验证 Java 声明的拓扑可被真实 broker 接收。 */
-// @Testcontainers：让测试生命周期管理临时 RabbitMQ 容器，需本机 Docker Desktop 可用。
-@Testcontainers
-// @SpringBootTest：启动真实 Spring 上下文以验证自动拓扑声明和发布器配置。
+// @SpringBootTest：启动真实 Spring 上下文，并连接本地 Compose 已发布的 RabbitMQ。
 @SpringBootTest(properties = {
         "spring.flyway.enabled=false",
+        "spring.rabbitmq.host=localhost",
+        "spring.rabbitmq.port=5672",
+        "spring.rabbitmq.username=auto_drama",
+        "spring.rabbitmq.password=auto_drama_dev",
         "spring.autoconfigure.exclude="
                 + "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration,"
                 + "org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration"
 })
+// @ActiveProfiles：使用集成测试配置，明确这是本地 Compose broker 验收。
+@ActiveProfiles("integration")
 // @ContextConfiguration：注入测试专用确认监听器，观察 ack 而不写真实任务表。
 @ContextConfiguration(classes = TaskMessagingIT.OutcomeConfiguration.class)
 class TaskMessagingIT {
-
-    /** Testcontainers 独立启动 RabbitMQ，避免依赖开发者已运行的 Compose 服务。 */
-    // @Container：在整个测试类期间保持一个 broker 容器。
-    @Container
-    static final RabbitMQContainer RABBIT_MQ = new RabbitMQContainer("rabbitmq:4-management-alpine");
-
-    /** @DynamicPropertySource：把临时容器的连接地址覆盖到 Spring RabbitMQ 配置。 */
-    @DynamicPropertySource
-    static void rabbitProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.rabbitmq.host", RABBIT_MQ::getHost);
-        registry.add("spring.rabbitmq.port", RABBIT_MQ::getAmqpPort);
-        registry.add("spring.rabbitmq.username", RABBIT_MQ::getAdminUsername);
-        registry.add("spring.rabbitmq.password", RABBIT_MQ::getAdminPassword);
-    }
 
     @Autowired
     private TaskMessagePublisher taskMessagePublisher;
@@ -74,7 +60,7 @@ class TaskMessagingIT {
     @Test
     void publisherConfirmAndQueueDeliveryWorkAgainstRabbitMq() throws InterruptedException {
         UUID taskId = UUID.randomUUID();
-        taskMessagePublisher.publish(new TaskExecutionMessage(null, taskId, "script.generate", UUID.randomUUID(),
+        taskMessagePublisher.publish(new TaskExecutionMessage(UUID.randomUUID(), taskId, "script.generate", UUID.randomUUID(),
                 UUID.randomUUID(), null, null, 0, "integration-trace", Instant.now(),
                 objectMapper.createObjectNode().put("sourceText", "test").set("projectConfig", objectMapper.createObjectNode())));
 

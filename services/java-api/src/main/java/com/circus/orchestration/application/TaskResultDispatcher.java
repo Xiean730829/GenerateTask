@@ -26,10 +26,11 @@ public class TaskResultDispatcher {
     // @TransactionalEventListener(AFTER_COMMIT)：只消费已经落库的成功状态，编排不读取未提交数据。
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onTaskSucceeded(TaskSucceededEvent event) {
-        if (!pipelinePolicy.automaticallyChains(event.taskType())) {
-            return;
-        }
-        handlerRegistry.find(event.taskType()).flatMap(handler -> handler.handle(event)).ifPresent(this::dispatch);
+        // Handler 始终先保存业务结果；PipelinePolicy 只控制是否执行返回的下一步。
+        handlerRegistry.find(event.taskType())
+                .flatMap(handler -> handler.handle(event))
+                .filter(nextStep -> pipelinePolicy.automaticallyChains(event.taskType()))
+                .ifPresent(this::dispatch);
     }
 
     /** 将 handler 的声明式意图转换为实际调用；业务 handler 不直接发送 MQ。 */

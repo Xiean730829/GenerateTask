@@ -72,20 +72,6 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- RabbitMQ 集成验收基础：仅在 integration profile 下由 Testcontainers 启动容器。 -->
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>1.21.2</version>
-            <scope>test</scope>
-        </dependency>
-        <!-- RabbitMQContainer：提供真实 broker，验证拓扑、确认回调和消息可达性。 -->
-        <dependency>
-            <groupId>org.testcontainers</groupId>
-            <artifactId>rabbitmq</artifactId>
-            <version>1.21.2</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <build>

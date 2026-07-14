@@ -25,7 +25,8 @@ class InMemoryTaskStateStore implements TaskStateStore {
         if (command.idempotencyKey() != null && !command.idempotencyKey().isBlank()) {
             idempotency.putIfAbsent(command.idempotencyKey() + ":" + command.taskType(), taskId);
         }
-        return new TaskDispatch(taskId, command, 0, UUID.randomUUID().toString(), Instant.now());
+        // 真实适配器应在同一事务把这个 ID 写入 generation_task_execution.message_id。
+        return new TaskDispatch(UUID.randomUUID(), taskId, command, 0, UUID.randomUUID().toString(), Instant.now());
     }
 
     @Override
