@@ -7,7 +7,7 @@ spring:
 
   # PostgreSQL：数据库名/账号/端口遵循 Issue #10 开发规范
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/auto_drama}
+    url: ${DB_URL:jdbc:postgresql://localhost:55432/auto_drama}
     username: ${DB_USERNAME:auto_drama}
     password: ${DB_PASSWORD:auto_drama_dev}
     driver-class-name: org.postgresql.Driver
