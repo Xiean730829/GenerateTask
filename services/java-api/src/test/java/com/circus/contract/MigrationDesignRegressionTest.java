@@ -58,6 +58,30 @@ class MigrationDesignRegressionTest {
         assertTrue(migration.contains("idx_shot_episode_scene_order"));
     }
 
+    @Test
+    void generationTaskExecutionUsesANewMigrationAndPersistsImmutableDispatchIdentity() throws IOException {
+        Path migrationPath = REPOSITORY_ROOT.resolve(
+                "services/java-api/src/main/resources/db/migration/V5__add_generation_task_execution.sql");
+
+        assertTrue(Files.exists(migrationPath), "Execution identity must not rewrite an applied migration");
+        String migration = Files.readString(migrationPath);
+        assertTrue(migration.contains("create table generation_task_execution"));
+        assertTrue(migration.contains("message_id       uuid         primary key"));
+        assertTrue(migration.contains("task_id          uuid         not null"));
+        assertTrue(migration.contains("attempt          integer      not null"));
+        assertTrue(migration.contains("payload_snapshot jsonb        not null"));
+        assertTrue(migration.contains("status           varchar(16)  not null default 'queued'"));
+        assertTrue(migration.contains("result_json      jsonb"));
+        assertTrue(migration.contains("error_code       varchar(128)"));
+        assertTrue(migration.contains("error_message    text"));
+        assertTrue(migration.contains("published_at     timestamptz"));
+        assertTrue(migration.contains("foreign key (task_id) references generation_task (id)"));
+        assertTrue(migration.contains("unique (task_id, attempt)"));
+        assertTrue(migration.contains("ck_gen_task_execution_attempt check (attempt >= 0)"));
+        assertTrue(migration.contains("idx_gen_task_execution_task_attempt"));
+        assertTrue(migration.contains("prevent_generation_task_execution_dispatch_mutation"));
+    }
+
     private static String read(String relativePath) throws IOException {
         return Files.readString(REPOSITORY_ROOT.resolve(relativePath));
     }

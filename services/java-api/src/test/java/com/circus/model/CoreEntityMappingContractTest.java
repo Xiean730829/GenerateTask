@@ -1,12 +1,16 @@
 package com.circus.model;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.lang.reflect.Field;
 import org.junit.jupiter.api.Test;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 class CoreEntityMappingContractTest {
 
@@ -71,6 +75,7 @@ class CoreEntityMappingContractTest {
         Class<?> revision = load("com.circus.panel.domain.PanelRevisionEntity");
         Class<?> video = load("com.circus.panel.domain.PanelVideoEntity");
         Class<?> task = load("com.circus.task.domain.GenerationTaskEntity");
+        Class<?> taskExecution = load("com.circus.task.domain.GenerationTaskExecutionEntity");
         Class<?> timeline = load("com.circus.timeline.domain.TimelineEntity");
         Class<?> export = load("com.circus.export.domain.ExportEntity");
 
@@ -82,6 +87,25 @@ class CoreEntityMappingContractTest {
         assertEquals("panel_revision_id", columnName(video, "panelRevisionId"));
         assertEquals("generation_task", task.getAnnotation(Table.class).name());
         assertEquals("idempotency_operation", columnName(task, "idempotencyOperation"));
+        assertThrows(NoSuchFieldException.class, () -> task.getDeclaredField("messageId"));
+        assertEquals("generation_task_execution", taskExecution.getAnnotation(Table.class).name());
+        assertTrue(field(taskExecution, "messageId").isAnnotationPresent(Id.class));
+        assertEquals("message_id", columnName(taskExecution, "messageId"));
+        assertEquals("task_id", columnName(taskExecution, "taskId"));
+        assertEquals("attempt", columnName(taskExecution, "attempt"));
+        assertEquals("trace_id", columnName(taskExecution, "traceId"));
+        assertEquals("payload_snapshot", columnName(taskExecution, "payloadSnapshot"));
+        assertEquals("status", columnName(taskExecution, "status"));
+        assertEquals("result_json", columnName(taskExecution, "resultJson"));
+        assertEquals("error_code", columnName(taskExecution, "errorCode"));
+        assertEquals("error_message", columnName(taskExecution, "errorMessage"));
+        assertEquals("created_at", columnName(taskExecution, "createdAt"));
+        assertEquals("published_at", columnName(taskExecution, "publishedAt"));
+        assertEquals("started_at", columnName(taskExecution, "startedAt"));
+        assertEquals("finished_at", columnName(taskExecution, "finishedAt"));
+        assertEquals("updated_at", columnName(taskExecution, "updatedAt"));
+        assertEquals(SqlTypes.JSON, field(taskExecution, "payloadSnapshot").getAnnotation(JdbcTypeCode.class).value());
+        assertEquals(SqlTypes.JSON, field(taskExecution, "resultJson").getAnnotation(JdbcTypeCode.class).value());
         assertEquals("timeline", timeline.getAnnotation(Table.class).name());
         assertEquals("video_track", columnName(timeline, "videoTrack"));
         assertEquals("export", export.getAnnotation(Table.class).name());
@@ -93,9 +117,13 @@ class CoreEntityMappingContractTest {
     }
 
     private static String columnName(Class<?> type, String fieldName) throws NoSuchFieldException {
-        Field field = type.getDeclaredField(fieldName);
+        Field field = field(type, fieldName);
         Column column = field.getAnnotation(Column.class);
         assertTrue(column != null, () -> type.getSimpleName() + "." + fieldName + " must declare @Column");
         return column.name();
+    }
+
+    private static Field field(Class<?> type, String fieldName) throws NoSuchFieldException {
+        return type.getDeclaredField(fieldName);
     }
 }
