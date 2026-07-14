@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 
+/** Flyway 迁移护栏：锁定数据库层的领域约束，避免重构时悄悄删掉唯一性或不可变性。 */
 class MigrationDesignRegressionTest {
 
     private static final Path REPOSITORY_ROOT = Path.of("../..").toAbsolutePath().normalize();
@@ -58,6 +59,7 @@ class MigrationDesignRegressionTest {
         assertTrue(migration.contains("idx_shot_episode_scene_order"));
     }
 
+    /** @Test：锁定 V5 的 messageId 主键、taskId + attempt 唯一性和不可变派发快照。 */
     @Test
     void generationTaskExecutionUsesANewMigrationAndPersistsImmutableDispatchIdentity() throws IOException {
         Path migrationPath = REPOSITORY_ROOT.resolve(

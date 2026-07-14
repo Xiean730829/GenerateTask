@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+/** JPA 映射护栏：锁定 Java 字段到 Flyway 表/列的名称与 JSON 类型。 */
 class CoreEntityMappingContractTest {
 
     @Test
@@ -69,6 +70,7 @@ class CoreEntityMappingContractTest {
         assertEquals("prompt_revision_id", columnName(keyframe, "promptRevisionId"));
     }
 
+    /** @Test：同时验证 GenerationTask 保持当前状态职责，execution 才持有 messageId 历史。 */
     @Test
     void productionEntitiesExposeThePersistedTableAndColumnNames() throws Exception {
         Class<?> panel = load("com.circus.panel.domain.PanelEntity");

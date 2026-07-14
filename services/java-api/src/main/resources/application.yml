@@ -39,6 +39,13 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USERNAME:auto_drama}
     password: ${RABBITMQ_PASSWORD:auto_drama_dev}
+    # correlated：broker ack/nack 会携带 CorrelationData，Java 可回填对应 execution。
+    publisher-confirm-type: correlated
+    # 无法路由到 queue 时触发 ReturnsCallback，而不是静默丢弃。
+    publisher-returns: true
+    template:
+      # 配合 publisher-returns，让不可路由消息强制返回发布器。
+      mandatory: true
 
 # Actuator：暴露健康检查，用于验证与容器栈（DB/Redis/RabbitMQ）的连通性
 management:
@@ -62,6 +69,8 @@ management:
       enabled: true
 
 app:
+  # Python 调 /internal/** 回写时必须携带的共享密钥；生产环境务必通过环境变量覆盖。
+  internal-api-key: ${INTERNAL_API_KEY:dev-internal-key}
   # 跨域：仅对外 /api 开放前端开发服务器来源；/internal 内部接口不开放跨域
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}

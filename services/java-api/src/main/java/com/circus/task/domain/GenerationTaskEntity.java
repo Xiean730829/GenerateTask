@@ -29,7 +29,7 @@ public class GenerationTaskEntity {
     @Column(name = "idempotency_operation", length = 160) private String idempotencyOperation;
     @JdbcTypeCode(Types.CHAR)
     @Column(name = "request_fingerprint", length = 64)
-private String requestFingerprint;
+    private String requestFingerprint;
     @Column(name = "trace_id", length = 128) private String traceId;
     @JdbcTypeCode(SqlTypes.JSON) @Column(name = "result_ref", columnDefinition = "jsonb") private JsonNode resultRef;
     @JdbcTypeCode(SqlTypes.JSON) @Column(name = "result_json", columnDefinition = "jsonb") private JsonNode resultJson;

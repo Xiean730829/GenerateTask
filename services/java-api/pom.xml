@@ -21,6 +21,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <!-- 原生 WebSocket：向 episode 工作台推送 task.updated 事件。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
         <!-- 请求 DTO 的 Bean Validation 注解与 @Valid 参数校验。 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -65,6 +70,20 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- RabbitMQ 集成验收基础：仅在 integration profile 下由 Testcontainers 启动容器。 -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>1.21.2</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- RabbitMQContainer：提供真实 broker，验证拓扑、确认回调和消息可达性。 -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>rabbitmq</artifactId>
+            <version>1.21.2</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
