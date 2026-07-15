@@ -1,0 +1,13 @@
+{
+  "passed": false,
+  "score": 72,
+  "problems": [
+    {
+      "code": "CONFLICT_NOT_VISIBLE",
+      "severity": "major",
+      "evidence": "主角只在对白中说明自己必须赶时间，没有出现阻碍救人或放弃材料的可观察选择。",
+      "repairInstruction": "让主角在电梯门、提交倒计时和受伤者之间完成一个明确、可观察且有代价的动作选择。"
+    }
+  ],
+  "summary": "剧本结构基本完整，但核心冲突仍停留在说明层面，必须改写后复检。"
+}

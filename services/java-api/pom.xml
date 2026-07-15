@@ -21,6 +21,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <!-- 请求 DTO 的 Bean Validation 注解与 @Valid 参数校验。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
         <!-- Actuator：健康检查，用于验证与容器栈的连通性 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/generation-spec/v2/shot-list.schema.json",
+  "title": "ShotList",
+  "description": "v2.0：一个 Script 拆解得到的 MS1 Shot 集合。",
+  "$comment": "v2.0 与 Python Worker 的 ShotList Schema 同步。应用层必须校验 abs(sum(shots[*].durationSeconds) - targetDurationSeconds) / targetDurationSeconds <= durationToleranceRatio。标准 JSON Schema 无法表达数组求和；还必须校验 shotIndex 连续且唯一。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["targetDurationSeconds", "durationToleranceRatio", "shots"],
+  "properties": {
+    "targetDurationSeconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3600
+    },
+    "durationToleranceRatio": {
+      "type": "number",
+      "const": 0.1,
+      "description": "Shot 总时长相对目标时长允许 ±10%。"
+    },
+    "shots": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 5,
+      "items": {
+        "$ref": "shot.schema.json"
+      }
+    }
+  }
+}

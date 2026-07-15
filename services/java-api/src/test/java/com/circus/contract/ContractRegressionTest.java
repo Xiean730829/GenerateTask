@@ -40,15 +40,29 @@ class ContractRegressionTest {
     }
 
     @Test
-    void taskMessagePayloadRequiresSourceTextAndProjectConfig() throws IOException {
-        JsonNode payload = json("packages/contracts/json-schema/generation-spec/task-execution.schema.json")
-                .path("properties")
-                .path("payload");
+    void scriptTaskPayloadRequiresSourceTextAndProjectConfig() throws IOException {
+        JsonNode schema = json("packages/contracts/json-schema/generation-spec/task-execution.schema.json");
+        JsonNode payload = schema.path("properties").path("payload");
 
-        assertTrue(payload.path("required").toString().contains("\"sourceText\""));
-        assertTrue(payload.path("required").toString().contains("\"projectConfig\""));
+        // Payload fields are conditional per taskType; sourceText/projectConfig are no longer
+        // blanket-required (media tasks carry immutable revision snapshots instead of text).
         assertTrue("string".equals(payload.path("properties").path("sourceText").path("type").asText()));
         assertTrue("object".equals(payload.path("properties").path("projectConfig").path("type").asText()));
+
+        // script.generate must still require sourceText + projectConfig via a top-level allOf rule.
+        boolean guarded = false;
+        for (JsonNode rule : schema.path("allOf")) {
+            JsonNode taskType = rule.path("if").path("properties").path("taskType");
+            boolean matchesScript = "script.generate".equals(taskType.path("const").asText())
+                    || taskType.path("enum").toString().contains("\"script.generate\"");
+            if (matchesScript) {
+                String required = rule.path("then").path("properties").path("payload").path("required").toString();
+                if (required.contains("\"sourceText\"") && required.contains("\"projectConfig\"")) {
+                    guarded = true;
+                }
+            }
+        }
+        assertTrue(guarded, "script.generate payload must require sourceText and projectConfig");
     }
 
     @Test

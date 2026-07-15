@@ -1,45 +1,56 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://contracts.auto-drama-studio.local/generation-spec/script-generation-result.schema.json",
-  "title": "ScriptGenerationResult 剧本生成结果",
-  "description": "script.generate 成功回写时 task-result.result 的结构（方案 B）。除完整 Script 外，同时回传故事圣经、质检结果、自动改写次数与各阶段 Prompt 版本，便于工作台展示与可追溯。",
-  "$comment": "task-result 本身不带 taskType，故按 taskType 区分的结果结构由 Java 依据任务类型选用对应结果 Schema 校验；本文件即 script.generate 的结果契约。",
+  "$id": "https://contracts.auto-drama-studio.local/generation-spec/v2/script-generation-result.schema.json",
+  "title": "ScriptGenerationResult",
+  "description": "v2.0：script.generate 成功时回写 Java 的业务结果内容。任务标识、attempt 与 status 由外层 TaskResult 承载。",
+  "$comment": "v2.0 以 Python Worker 严格 Schema 为准；- v1 允许 storyBible、quality、promptVersions 缺失或为空。契约版本 v2.0 与结果载荷内部 schemaVersion=1.0 分开管理。result.script 是完整 Python 内容 Script，不包含 Java 业务 ID、版本、状态或时间戳。应用层必须校验 script 与 storyBible.metadata 的一致性。",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "script", "rewriteCount"],
+  "required": ["schemaVersion", "script", "storyBible", "quality", "rewriteCount", "promptVersions"],
   "properties": {
     "schemaVersion": {
-      "description": "结果结构版本，例如 1.0",
-      "type": "string",
-      "minLength": 1
+      "const": "1.0"
     },
     "script": {
-      "description": "剧本生成产物（创作结构，非库实体）。落库后由 Java 转换为 business/script.schema.json 的 Script。",
       "$ref": "generated-script.schema.json"
     },
     "storyBible": {
-      "description": "故事圣经（元信息 + 世界设定）。可空。",
-      "oneOf": [
-        { "type": "null" },
-        { "$ref": "story-bible.schema.json" }
-      ]
+      "$ref": "story-bible.schema.json"
     },
     "quality": {
-      "description": "剧本质检结果。可空。",
-      "oneOf": [
-        { "type": "null" },
-        { "$ref": "script-quality.schema.json" }
+      "allOf": [
+        {"$ref": "script-quality.schema.json"},
+        {
+          "type": "object",
+          "required": ["passed"],
+          "properties": {
+            "passed": {"const": true}
+          }
+        }
       ]
     },
     "rewriteCount": {
-      "description": "自动改写次数（MS1 最多 1 次）",
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "maximum": 1
     },
     "promptVersions": {
-      "description": "各阶段 Prompt 版本映射：键为阶段名（如 scriptExpander），值为版本号。可空。",
-      "type": ["object", "null"],
-      "additionalProperties": { "type": "string" }
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scriptExpander",
+        "scriptGenerator",
+        "scriptQualityChecker",
+        "scriptRewriter",
+        "storyBibleExtractor"
+      ],
+      "properties": {
+        "scriptExpander": {"type": "string", "pattern": "^v[1-9][0-9]*$"},
+        "scriptGenerator": {"type": "string", "pattern": "^v[1-9][0-9]*$"},
+        "scriptQualityChecker": {"type": "string", "pattern": "^v[1-9][0-9]*$"},
+        "scriptRewriter": {"type": "string", "pattern": "^v[1-9][0-9]*$"},
+        "storyBibleExtractor": {"type": "string", "pattern": "^v[1-9][0-9]*$"}
+      }
     }
   }
 }

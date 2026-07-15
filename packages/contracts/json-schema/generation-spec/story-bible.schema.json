@@ -1,56 +1,107 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://contracts.auto-drama-studio.local/generation-spec/story-bible.schema.json",
-  "title": "StoryBible 故事圣经",
-  "description": "script.generate 产物的一部分：项目级一致性约束（元信息 + 世界设定），供下游镜头/资产/视频生成保持人物、风格与世界观一致。字段依当前 Worker 产物推断，最终以罗诗辉定义为准。",
+  "$id": "https://contracts.auto-drama-studio.local/generation-spec/v2/story-bible.schema.json",
+  "title": "StoryBible",
+  "description": "v2.0：最终 Script 通过质量检查后提取的静态故事圣经。只保存 metadata 与 worldSettings。",
+  "$comment": "v2.0 以 Python Worker 严格 Schema 为准；- v1 的可空元信息和世界设定字段已收紧。StoryBible 仍只保存跨场景稳定事实；人物当前状态、道具位置、天气变化、Scene 与 Shot 均属于动态实例。",
   "type": "object",
   "additionalProperties": false,
   "required": ["metadata", "worldSettings"],
   "properties": {
     "metadata": {
-      "description": "作品元信息与导演基调",
+      "$ref": "#/$defs/metadata"
+    },
+    "worldSettings": {
+      "$ref": "#/$defs/worldSettings"
+    }
+  },
+  "$defs": {
+    "metadata": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["title", "logline", "genre", "tone", "visualStyle"],
+      "required": [
+        "title",
+        "logline",
+        "genre",
+        "language",
+        "targetDurationSeconds",
+        "aspectRatio",
+        "tone",
+        "visualStyle",
+        "directorialVoice"
+      ],
       "properties": {
-        "title": { "description": "标题", "type": "string", "minLength": 1 },
-        "logline": { "description": "一句话梗概", "type": "string", "minLength": 1 },
-        "genre": { "description": "题材类型", "type": "string" },
-        "language": { "description": "语言标签，例如 zh-CN。可空。", "type": ["string", "null"] },
-        "targetDurationSeconds": { "description": "目标时长（秒）。可空。", "type": ["integer", "null"], "minimum": 1 },
-        "aspectRatio": { "description": "画幅比例，例如 9:16。可空。", "type": ["string", "null"] },
-        "tone": { "description": "整体基调，例如 紧张、克制", "type": "string" },
-        "visualStyle": { "description": "视觉风格基线", "type": "string" },
-        "directorialVoice": { "description": "导演手法/镜头语言基线。可空。", "type": ["string", "null"] }
+        "title": {"type": "string", "minLength": 1, "maxLength": 200},
+        "logline": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "genre": {"type": "string", "minLength": 1, "maxLength": 100},
+        "language": {
+          "type": "string",
+          "pattern": "^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$",
+          "description": "BCP 47 风格语言标签，例如 zh-CN。"
+        },
+        "targetDurationSeconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3600
+        },
+        "aspectRatio": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*:[1-9][0-9]*$"
+        },
+        "tone": {"type": "string", "minLength": 1, "maxLength": 500},
+        "visualStyle": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "directorialVoice": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "description": "功能性导演声音，不使用具名在世导演或工作室作为风格捷径。"
+        }
       }
     },
     "worldSettings": {
-      "description": "世界设定与一致性红线",
       "type": "object",
       "additionalProperties": false,
-      "required": ["timePeriod", "geography", "coreThemes"],
+      "required": [
+        "timePeriod",
+        "geography",
+        "socialContext",
+        "worldRules",
+        "environmentBaseline",
+        "colorAndLightBaseline",
+        "coreThemes",
+        "forbiddenContradictions"
+      ],
       "properties": {
-        "timePeriod": { "description": "时代背景", "type": "string" },
-        "geography": { "description": "地理/空间设定", "type": "string" },
-        "socialContext": { "description": "社会/秩序背景。可空。", "type": ["string", "null"] },
+        "timePeriod": {"type": "string", "minLength": 1, "maxLength": 500},
+        "geography": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "socialContext": {"type": "string", "minLength": 1, "maxLength": 2000},
         "worldRules": {
-          "description": "世界规则清单（可为空数组）",
-          "type": "array",
-          "items": { "type": "string" }
+          "$ref": "#/$defs/uniqueStringList"
         },
-        "environmentBaseline": { "description": "环境基线描述。可空。", "type": ["string", "null"] },
-        "colorAndLightBaseline": { "description": "色彩与光线基线。可空。", "type": ["string", "null"] },
+        "environmentBaseline": {"type": "string", "minLength": 1, "maxLength": 2000},
+        "colorAndLightBaseline": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000,
+          "description": "跨场景稳定的色彩与有物理来源的光线基线。"
+        },
         "coreThemes": {
-          "description": "核心主题",
           "type": "array",
-          "items": { "type": "string" }
+          "minItems": 1,
+          "maxItems": 10,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 200}
         },
         "forbiddenContradictions": {
-          "description": "禁止出现的矛盾/一致性红线（可为空数组）",
-          "type": "array",
-          "items": { "type": "string" }
+          "$ref": "#/$defs/uniqueStringList"
         }
       }
+    },
+    "uniqueStringList": {
+      "type": "array",
+      "maxItems": 20,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1, "maxLength": 1000}
     }
   }
 }
