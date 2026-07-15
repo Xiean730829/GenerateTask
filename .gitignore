@@ -5,6 +5,13 @@
 .idea
 
 .env
+
+# Web build artifacts and local configuration
+apps/web/node_modules/
+apps/web/dist/
+apps/web/.vite/
+apps/web/.env*
+!apps/web/.env.example
 *.env
 !*.env.example
 
