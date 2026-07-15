@@ -17,5 +17,12 @@ public interface TaskStateStore {
 
     TaskDispatch retry(UUID taskId);
 
+    /**
+     * Rebuilds a dispatch for an initial broker publication that failed while the
+     * current task is still pending. The task id is stable; the execution attempt
+     * and message id are new identities.
+     */
+    TaskDispatch republishPending(UUID taskId);
+
     void cancel(UUID taskId);
 }

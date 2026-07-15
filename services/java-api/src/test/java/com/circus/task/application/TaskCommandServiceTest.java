@@ -66,6 +66,11 @@ class TaskCommandServiceTest {
         }
 
         @Override
+        public TaskDispatch republishPending(UUID taskId) {
+            throw new AssertionError("pending recovery is not part of this test");
+        }
+
+        @Override
         public void cancel(UUID taskId) {
             throw new AssertionError("cancel is not part of this test");
         }

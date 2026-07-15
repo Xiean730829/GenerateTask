@@ -35,5 +35,10 @@ class InMemoryTaskStateStore implements TaskStateStore {
     }
 
     @Override
+    public TaskDispatch republishPending(UUID taskId) {
+        throw new UnsupportedOperationException("InMemoryTaskStateStore does not republish pending tasks");
+    }
+
+    @Override
     public void cancel(UUID taskId) {}
 }

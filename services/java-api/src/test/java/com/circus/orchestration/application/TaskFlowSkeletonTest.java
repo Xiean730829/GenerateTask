@@ -138,6 +138,11 @@ class TaskFlowSkeletonTest {
         }
 
         @Override
+        public TaskDispatch republishPending(UUID taskId) {
+            throw new UnsupportedOperationException("pending recovery is not part of the skeleton test");
+        }
+
+        @Override
         public void cancel(UUID taskId) {}
     }
 

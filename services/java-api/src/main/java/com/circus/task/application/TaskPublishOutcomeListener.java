@@ -13,7 +13,7 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
  * the current task row is changed.
  */
 @Service
-@ConditionalOnBean({GenerationTaskRepository.class, GenerationTaskExecutionRepository.class})
+@ConditionalOnProperty(name = "spring.flyway.enabled", havingValue = "true", matchIfMissing = true)
 public class TaskPublishOutcomeListener implements PublishOutcomeListener {
 
     private final GenerationTaskRepository taskRepository;

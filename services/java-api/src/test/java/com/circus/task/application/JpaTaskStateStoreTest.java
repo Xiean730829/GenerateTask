@@ -159,6 +159,49 @@ class JpaTaskStateStoreTest {
     }
 
     @Test
+    void republishesPendingPublishFailureWithSameTaskAndNewExecutionIdentity() {
+        UUID taskId = UUID.randomUUID();
+        UUID oldMessageId = UUID.randomUUID();
+        GenerationTaskEntity task = GenerationTaskEntity.pending(
+                taskId,
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                null,
+                null,
+                JpaTaskStateStore.MS1_DEMO_OWNER_ID,
+                "script.generate",
+                "request-pending-retry",
+                "script.generate",
+                "fingerprint",
+                "trace-old",
+                NOW,
+                3);
+        task.markPublishFailed("TASK_PUBLISH_CONFIRM_FAILED", "broker rejected message", NOW);
+        GenerationTaskExecutionEntity oldExecution = GenerationTaskExecutionEntity.queued(
+                oldMessageId,
+                taskId,
+                0,
+                "trace-old",
+                JsonNodeFactory.instance.objectNode().put("sourceText", "idea"),
+                NOW);
+        oldExecution.markFailed("TASK_PUBLISH_CONFIRM_FAILED", "broker rejected message", NOW);
+        when(taskRepository.findById(taskId)).thenReturn(Optional.of(task));
+        when(executionRepository.findByTaskIdAndAttempt(taskId, 0)).thenReturn(Optional.of(oldExecution));
+
+        TaskDispatch dispatch = store.republishPending(taskId);
+
+        assertThat(dispatch.taskId()).isEqualTo(taskId);
+        assertThat(dispatch.messageId()).isNotEqualTo(oldMessageId);
+        assertThat(dispatch.attempt()).isEqualTo(1);
+        assertThat(dispatch.command().payload()).isEqualTo(oldExecution.payloadSnapshot());
+        assertThat(task.status()).isEqualTo("pending");
+        assertThat(task.attempt()).isEqualTo(1);
+        assertThat(task.retryCount()).isEqualTo(1);
+        verify(taskRepository).save(task);
+        verify(executionRepository).save(any(GenerationTaskExecutionEntity.class));
+    }
+
+    @Test
     void cancelsAPendingTaskWithoutCreatingAnotherExecution() {
         UUID taskId = UUID.randomUUID();
         GenerationTaskEntity task = GenerationTaskEntity.pending(

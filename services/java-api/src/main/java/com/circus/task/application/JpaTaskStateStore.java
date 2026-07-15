@@ -18,7 +18,7 @@ import java.util.HexFormat;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
  * MS1 has no authentication, so all tasks use the seeded demo user as owner.
  */
 @Service
-@ConditionalOnBean({GenerationTaskRepository.class, GenerationTaskExecutionRepository.class})
+@ConditionalOnProperty(name = "spring.flyway.enabled", havingValue = "true", matchIfMissing = true)
 public class JpaTaskStateStore implements TaskStateStore {
 
     public static final UUID MS1_DEMO_OWNER_ID =
@@ -149,6 +149,49 @@ public class JpaTaskStateStore implements TaskStateStore {
                 traceId,
                 command.payload().deepCopy(),
                 now);
+        taskRepository.save(task);
+        executionRepository.save(execution);
+        return new TaskDispatch(messageId, taskId, command, nextAttempt, traceId, now);
+    }
+
+    @Override
+    @Transactional
+    public TaskDispatch republishPending(UUID taskId) {
+        GenerationTaskEntity task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new IllegalArgumentException("task not found: " + taskId));
+        if (!GenerationTaskStatus.PENDING.wireValue().equals(task.status())) {
+            throw new IllegalStateException("only pending tasks can be republished: " + taskId);
+        }
+        if (task.retryable() == null || !task.retryable()) {
+            throw new IllegalStateException("pending task is not marked retryable: " + taskId);
+        }
+        if (task.retryCount() >= task.maxRetries()) {
+            throw new IllegalStateException("task retry limit exceeded: " + taskId);
+        }
+
+        GenerationTaskExecutionEntity previousExecution = executionRepository
+                .findByTaskIdAndAttempt(taskId, task.attempt())
+                .orElseThrow(() -> new IllegalStateException("task execution not found: " + taskId));
+        if (!"failed".equals(previousExecution.status())) {
+            throw new IllegalStateException("pending task execution is not failed: " + taskId);
+        }
+
+        Instant now = clock.instant();
+        String traceId = UUID.randomUUID().toString();
+        int nextAttempt = task.attempt() + 1;
+        UUID messageId = UUID.randomUUID();
+        JsonNode payload = previousExecution.payloadSnapshot().deepCopy();
+        task.beginPendingRepublish(traceId, now);
+        CreateTaskCommand command = new CreateTaskCommand(
+                task.taskType(),
+                task.projectId(),
+                task.episodeId(),
+                task.shotId(),
+                task.panelId(),
+                payload,
+                task.idempotencyKey());
+        GenerationTaskExecutionEntity execution = GenerationTaskExecutionEntity.queued(
+                messageId, taskId, nextAttempt, traceId, payload.deepCopy(), now);
         taskRepository.save(task);
         executionRepository.save(execution);
         return new TaskDispatch(messageId, taskId, command, nextAttempt, traceId, now);

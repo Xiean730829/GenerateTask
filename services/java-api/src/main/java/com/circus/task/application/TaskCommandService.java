@@ -42,6 +42,16 @@ public class TaskCommandService implements TaskCommandInterface {
         eventPublisher.publishEvent(new TaskDispatchRequestedEvent(this, dispatch));
     }
 
+    /**
+     * Internal recovery entry for an initial publication failure. The new
+     * dispatch is published only after the recovery transaction commits.
+     */
+    @Transactional
+    public void republishPending(UUID taskId) {
+        TaskDispatch dispatch = taskStateStore.republishPending(taskId);
+        eventPublisher.publishEvent(new TaskDispatchRequestedEvent(this, dispatch));
+    }
+
     /** @Override：取消规则同样留给真实状态机，避免命令层感知持久化细节。 */
     @Override
     // @Transactional：取消与后续状态校验保持原子性。

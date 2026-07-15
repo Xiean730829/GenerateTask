@@ -107,9 +107,30 @@ public class GenerationTaskExecutionEntity {
 
     public Instant updatedAt() { return updatedAt; }
 
+    public JsonNode resultJson() { return resultJson; }
+
+    public String errorCode() { return errorCode; }
+
+    public String errorMessage() { return errorMessage; }
+
     public void markPublished(Instant now) {
         status = "queued";
         publishedAt = now;
+        updatedAt = now;
+    }
+
+    public void markRunning(Instant now) {
+        status = "running";
+        if (startedAt == null) {
+            startedAt = now;
+        }
+        updatedAt = now;
+    }
+
+    public void markSucceeded(JsonNode result, Instant now) {
+        status = "succeeded";
+        resultJson = result == null ? null : result.deepCopy();
+        finishedAt = now;
         updatedAt = now;
     }
 

@@ -119,6 +119,16 @@ public class GenerationTaskEntity {
 
     public Instant updatedAt() { return updatedAt; }
 
+    public JsonNode resultRef() { return resultRef; }
+
+    public JsonNode resultJson() { return resultJson; }
+
+    public String errorCode() { return errorCode; }
+
+    public String errorMessage() { return errorMessage; }
+
+    public Integer costPoints() { return costPoints; }
+
     public void markQueued(Instant now) {
         status = "queued";
         queuedAt = now;
@@ -128,12 +138,33 @@ public class GenerationTaskEntity {
         updatedAt = now;
     }
 
+    public void markRunning(int nextProgress, Instant now) {
+        status = "running";
+        progress = nextProgress;
+        if (startedAt == null) {
+            startedAt = now;
+        }
+        updatedAt = now;
+    }
+
     public void markFailed(boolean canRetry, String code, String message, Instant now) {
         status = "failed";
         progress = 100;
         retryable = canRetry;
+        resultJson = null;
         errorCode = code;
         errorMessage = message;
+        finishedAt = now;
+        updatedAt = now;
+    }
+
+    public void markSucceeded(JsonNode result, Instant now) {
+        status = "succeeded";
+        progress = 100;
+        retryable = null;
+        resultJson = result == null ? null : result.deepCopy();
+        errorCode = null;
+        errorMessage = null;
         finishedAt = now;
         updatedAt = now;
     }
@@ -151,6 +182,27 @@ public class GenerationTaskEntity {
 
     public void beginRetry(String nextTraceId, Instant now) {
         status = "retrying";
+        retryCount = retryCount + 1;
+        attempt = attempt + 1;
+        progress = 0;
+        retryable = null;
+        errorCode = null;
+        errorMessage = null;
+        resultRef = null;
+        resultJson = null;
+        queuedAt = null;
+        startedAt = null;
+        finishedAt = null;
+        traceId = nextTraceId;
+        updatedAt = now;
+    }
+
+    /**
+     * Advances the dispatch identity after an initial broker failure without
+     * making the task look queued before Rabbit confirms the new publication.
+     */
+    public void beginPendingRepublish(String nextTraceId, Instant now) {
+        status = "pending";
         retryCount = retryCount + 1;
         attempt = attempt + 1;
         progress = 0;
