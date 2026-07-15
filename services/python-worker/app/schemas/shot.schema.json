@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.auto-drama-studio.local/generation-spec/v1/shot.schema.json",
+  "title": "Shot",
+  "description": "后续 ShotDesigner 使用的最小分镜内容对象。Shot 只描述当前局部可见状态与动作，不承载剧情转折、剧情梗概或未来事件。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "shotIndex",
+    "sceneIndex",
+    "durationSeconds",
+    "environmentDescription",
+    "characterInstances",
+    "propInstances",
+    "action",
+    "endState",
+    "dialogues",
+    "cameraDescription",
+    "audioDescription",
+    "continuityLocks"
+  ],
+  "properties": {
+    "shotIndex": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "sceneIndex": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "关联 Script 中的 Scene 序号。"
+    },
+    "durationSeconds": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "当前 Shot 的预估时长。平台时长能力不在此处硬编码。"
+    },
+    "environmentDescription": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000,
+      "description": "当前画面实际可见的物理空间、背景层次、天气、材质和有来源的光线。"
+    },
+    "characterInstances": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/characterInstance"}
+    },
+    "propInstances": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/propInstance"}
+    },
+    "action": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 3000,
+      "description": "本 Shot 唯一的主要可观察动作；不写心理活动或剧情转折说明。"
+    },
+    "endState": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "description": "动作完成时可观察的物理终点，为下一 Shot 提供交接。"
+    },
+    "dialogues": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {"$ref": "#/$defs/dialogue"}
+    },
+    "cameraDescription": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "description": "当前 Shot 的单一、由动作意图驱动的景别、机位、构图和运镜描述。"
+    },
+    "audioDescription": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "description": "当前 Shot 的对白、环境声和同步音效意图；跨 Shot 配乐统一留给后期。"
+    },
+    "continuityLocks": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1000
+      },
+      "description": "当前 Shot 必须继承且不得无解释改变的可见事实。"
+    }
+  },
+  "$defs": {
+    "characterInstance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["characterName", "visualState", "physicalAction", "spatialAnchor"],
+      "properties": {
+        "characterName": {"type": "string", "minLength": 1, "maxLength": 100},
+        "visualState": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000,
+          "description": "本 Shot 可见的形态、服装和身体状态。"
+        },
+        "physicalAction": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000,
+          "description": "可观察的身体动作，不使用抽象情绪替代。"
+        },
+        "spatialAnchor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "description": "画面位置、前后景关系及与环境或其他实体的空间关系。"
+        }
+      }
+    },
+    "propInstance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["propName", "visualState", "spatialAnchor"],
+      "properties": {
+        "propName": {"type": "string", "minLength": 1, "maxLength": 200},
+        "visualState": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000,
+          "description": "材质、颜色、形态和当前物理状态。"
+        },
+        "spatialAnchor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "description": "道具当前持有者、位置及与角色或环境的关系。"
+        }
+      }
+    },
+    "dialogue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["speaker", "text"],
+      "properties": {
+        "speaker": {"type": "string", "minLength": 1, "maxLength": 100},
+        "performanceCue": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "可观察且简短的表演提示；没有时省略。"
+        },
+        "text": {"type": "string", "minLength": 1, "maxLength": 500}
+      }
+    }
+  }
+}

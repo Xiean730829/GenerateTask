@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/business/asset-reference.schema.json",
+  "title": "AssetReference 资产生产上下文引用",
+  "description": "用户级 Asset 在 Project、Episode 或 Shot 生产上下文中的引用；解除引用不删除 Asset。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "assetId", "projectId", "usage", "createdAt"],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "assetId": { "type": "string", "format": "uuid" },
+    "projectId": { "type": "string", "format": "uuid" },
+    "episodeId": { "type": ["string", "null"], "format": "uuid" },
+    "shotId": { "type": ["string", "null"], "format": "uuid" },
+    "usage": { "type": "string", "enum": ["character", "prop", "scene", "style", "reference"] },
+    "createdAt": { "type": "string", "format": "date-time" }
+  }
+}

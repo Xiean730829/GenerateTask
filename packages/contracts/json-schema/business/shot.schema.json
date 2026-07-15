@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/business/shot.schema.json",
+  "title": "Shot 镜头",
+  "description": "镜头是可编辑的最小单位。由 Python 的 shot.generate 任务将剧本拆成 3-5 个 Shot 后回写 Java。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "episodeId", "scriptId", "orderIndex", "createdAt"],
+  "properties": {
+    "id": {
+      "description": "镜头唯一标识",
+      "type": "string",
+      "format": "uuid"
+    },
+    "episodeId": {
+      "description": "所属分集 ID",
+      "type": "string",
+      "format": "uuid"
+    },
+    "scriptId": {
+      "description": "来源剧本 ID",
+      "type": "string",
+      "format": "uuid"
+    },
+    "orderIndex": {
+      "description": "镜头在分集内的顺序，从 0 开始",
+      "type": "integer",
+      "minimum": 0
+    },
+    "durationSeconds": {
+      "description": "镜头时长（秒），可空",
+      "type": ["number", "null"],
+      "minimum": 0
+    },
+    "shotSize": {
+      "description": "景别，例如远景、全景、近景、特写，可空",
+      "type": ["string", "null"]
+    },
+    "characters": {
+      "description": "出场角色名称列表",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "action": {
+      "description": "镜头动作描述，可空",
+      "type": ["string", "null"]
+    },
+    "dialogue": {
+      "description": "镜头台词，可空",
+      "type": ["string", "null"]
+    },
+    "cameraMovement": {
+      "description": "运镜方式，例如推、拉、摇、移，可空",
+      "type": ["string", "null"]
+    },
+    "generationPrompt": {
+      "description": "用于关键帧/视频生成的提示词，可空",
+      "type": ["string", "null"]
+    },
+    "currentPromptRevisionId": {
+      "description": "当前选用的不可变 ShotPromptRevision。generationPrompt 仅为工作台展示便利字段；生产任务以该版本为准。",
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "status": {
+      "description": "镜头生产状态",
+      "type": "string"
+    },
+    "createdAt": {
+      "description": "创建时间",
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

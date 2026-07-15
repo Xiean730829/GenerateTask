@@ -1,0 +1,104 @@
+openapi: 3.1.0
+info:
+  title: Auto Drama Studio Internal API
+  version: 0.1.0
+  description: Internal contracts used by trusted production workers. Public product APIs remain under /api and are versioned separately.
+servers:
+  - url: http://java-api:8080
+tags:
+  - name: internal-task-callback
+    description: Trusted Worker-to-Java GenerationTask status reports.
+security:
+  - internalApiKey: []
+paths:
+  /internal/tasks/{taskId}/result:
+    post:
+      tags: [internal-task-callback]
+      operationId: reportGenerationTaskResult
+      summary: Report a GenerationTask state transition from a Worker.
+      description: The Java task module validates service identity, task ID, attempt, idempotency and state transition before persisting a report.
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: GenerationTask identifier. It must equal the taskId in the request body.
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../json-schema/generation-spec/task-result.schema.json
+      responses:
+        '200':
+          description: The report was accepted or safely ignored because it was stale or already terminal.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResultAcknowledgement'
+        '401':
+          description: Worker 鉴权失败（error.code = UNAUTHORIZED_INTERNAL）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: No GenerationTask exists for taskId.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    internalApiKey:
+      type: apiKey
+      in: header
+      name: X-Internal-Api-Key
+      description: 受信任 Worker 回写鉴权密钥。MS1 采用 API Key（亦可改用内网 IP 白名单）。
+  schemas:
+    TaskResultAcknowledgement:
+      type: object
+      additionalProperties: false
+      required: [success, data, error]
+      properties:
+        success:
+          type: boolean
+          const: true
+        data:
+          type: object
+          additionalProperties: false
+          required: [taskId, ignored]
+          properties:
+            taskId:
+              type: string
+              format: uuid
+            ignored:
+              type: boolean
+              description: True when a stale attempt or terminal task report was ignored idempotently.
+        error:
+          type: 'null'
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [success, data, error]
+      properties:
+        success:
+          type: boolean
+          const: false
+        data:
+          type: 'null'
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message, details]
+          properties:
+            code:
+              type: string
+              description: 稳定错误码（如 UNAUTHORIZED_INTERNAL）。完整清单见 packages/contracts/error-codes.md。
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true

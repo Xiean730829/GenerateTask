@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/business/timeline.schema.json",
+  "title": "Timeline 时间线",
+  "description": "分集时间线：将剧情片段、镜头视频、音频和字幕合成为可导出的轨道结构。MS1 仅提供只读或轻量时间线。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "episodeId", "status", "createdAt", "updatedAt"],
+  "properties": {
+    "id": {
+      "description": "时间线唯一标识",
+      "type": "string",
+      "format": "uuid"
+    },
+    "episodeId": {
+      "description": "所属分集 ID",
+      "type": "string",
+      "format": "uuid"
+    },
+    "status": {
+      "description": "时间线状态",
+      "type": "string"
+    },
+    "videoTrack": {
+      "description": "视频轨：按顺序排列的镜头视频片段。MS1 阶段元素结构自由。",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "audioTrack": {
+      "description": "音频轨：配音片段。MS1 阶段元素结构自由。",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "subtitleTrack": {
+      "description": "字幕轨：字幕条目。MS1 阶段元素结构自由。",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "createdAt": {
+      "description": "创建时间",
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "description": "最后更新时间",
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/generation-spec/task-result.schema.json",
+  "title": "GenerationTask result report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "messageId",
+    "taskId",
+    "episodeId",
+    "status",
+    "attempt",
+    "progress",
+    "reportedAt"
+  ],
+  "properties": {
+    "messageId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "taskId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "episodeId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "MS1 frontends subscribe to task events by Episode, so every worker report retains its owning Episode."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["running", "succeeded", "failed"]
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "progress": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "result": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "message", "retryable"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "retryable": {
+          "type": "boolean",
+          "description": "Whether Java may transition this failed task into retrying when retry_count is below max_retries."
+        }
+      }
+    },
+    "worker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "reportedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "allOf": [
+    {
+      "$comment": "running：必须带 progress；禁止带 result / error。",
+      "if": { "required": ["status"], "properties": { "status": { "const": "running" } } },
+      "then": {
+        "required": ["progress"],
+        "not": { "anyOf": [{ "required": ["result"] }, { "required": ["error"] }] }
+      }
+    },
+    {
+      "$comment": "succeeded：必须带 result 且 progress=100；禁止带 error。",
+      "if": { "required": ["status"], "properties": { "status": { "const": "succeeded" } } },
+      "then": {
+        "required": ["result"],
+        "properties": { "progress": { "const": 100 } },
+        "not": { "required": ["error"] }
+      }
+    },
+    {
+      "$comment": "failed：必须带 error 且 progress=100；禁止带 result。",
+      "if": { "required": ["status"], "properties": { "status": { "const": "failed" } } },
+      "then": {
+        "required": ["error"],
+        "properties": { "progress": { "const": 100 } },
+        "not": { "required": ["result"] }
+      }
+    }
+  ]
+}

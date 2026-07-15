@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/business/panel-revision.schema.json",
+  "title": "PanelRevision 剧情片段组装快照",
+  "description": "固定 Panel 成员镜头、Prompt 版本、选定关键帧与 AssetRevision 的不可变快照，是 PanelVideo 的唯一生成输入。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "panelId", "revisionNo", "shotPromptRevisionIds", "assetRevisionIds", "keyframeMediaIds", "createdAt"],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "panelId": { "type": "string", "format": "uuid" },
+    "revisionNo": { "type": "integer", "minimum": 1 },
+    "shotPromptRevisionIds": { "type": "array", "items": { "type": "string", "format": "uuid" } },
+    "assetRevisionIds": { "type": "array", "items": { "type": "string", "format": "uuid" } },
+    "keyframeMediaIds": { "type": "array", "items": { "type": "string", "format": "uuid" } },
+    "createdAt": { "type": "string", "format": "date-time" }
+  }
+}

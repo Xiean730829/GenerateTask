@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.auto-drama-studio.local/generation-spec/v1/script.schema.json",
+  "title": "Script",
+  "description": "后端从 ScriptDraft 长文本协议解析得到的正式剧本内容对象。业务 ID 与任务状态由 Java 管理，不属于本内容契约。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "title",
+    "logline",
+    "storyPromise",
+    "storySummary",
+    "finalOutcome",
+    "targetDurationSeconds",
+    "language",
+    "genre",
+    "style",
+    "characters",
+    "scenes",
+    "scriptText"
+  ],
+  "properties": {
+    "title": {"type": "string", "minLength": 1, "maxLength": 200},
+    "logline": {"type": "string", "minLength": 1, "maxLength": 1000},
+    "storyPromise": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000,
+      "description": "故事向观众承诺的核心体验或问题。"
+    },
+    "storySummary": {"type": "string", "minLength": 1},
+    "finalOutcome": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "description": "故事最终发生的结果以及主角外部处境的变化。"
+    },
+    "targetDurationSeconds": {"type": "integer", "minimum": 1, "maximum": 3600},
+    "language": {
+      "type": "string",
+      "pattern": "^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$"
+    },
+    "genre": {"type": "string", "minLength": 1, "maxLength": 100},
+    "style": {"type": "string", "minLength": 1, "maxLength": 1000},
+    "characters": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/character"}
+    },
+    "scenes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/scene"}
+    },
+    "scriptText": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^\\[TITLE\\][\\s\\S]*\\[END_SCRIPT\\]\\s*$",
+      "description": "通过 Parser 校验的原始 ScriptDraft 文本。"
+    }
+  },
+  "$defs": {
+    "character": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "narrativeRole", "description", "relationships"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1, "maxLength": 100},
+        "narrativeRole": {"type": "string", "minLength": 1, "maxLength": 200},
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000,
+          "description": "基础可辨认形态、行为特征及其在剧情中的作用，以一段长描述承载。"
+        },
+        "relationships": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 1000}
+        }
+      }
+    },
+    "scene": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sceneIndex",
+        "slugline",
+        "purpose",
+        "dramaticChange",
+        "environment",
+        "characterState",
+        "elements"
+      ],
+      "properties": {
+        "sceneIndex": {"type": "integer", "minimum": 1},
+        "slugline": {"type": "string", "minLength": 1, "maxLength": 500},
+        "purpose": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "description": "本场在完整剧本中的剧情功能，只存在于 Script 层。"
+        },
+        "dramaticChange": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "description": "本场开始与结束之间的场景级变化，不直接下发给 Shot。"
+        },
+        "environment": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000,
+          "description": "当前场景实际可见的空间、背景层次、天气和有物理来源的光线。"
+        },
+        "characterState": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000,
+          "description": "进入本场时的人物可见形态、服装、身体状况和行为状态。"
+        },
+        "elements": {
+          "type": "array",
+          "minItems": 1,
+          "contains": {
+            "type": "object",
+            "required": ["type"],
+            "properties": {"type": {"const": "action"}}
+          },
+          "items": {
+            "oneOf": [
+              {"$ref": "#/$defs/actionElement"},
+              {"$ref": "#/$defs/dialogueElement"}
+            ]
+          }
+        }
+      }
+    },
+    "actionElement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "content"],
+      "properties": {
+        "type": {"const": "action"},
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000,
+          "description": "连续、可观察、可表演的动作。"
+        }
+      }
+    },
+    "dialogueElement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "speaker", "text"],
+      "properties": {
+        "type": {"const": "dialogue"},
+        "speaker": {"type": "string", "minLength": 1, "maxLength": 100},
+        "performanceCue": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "可观察的表演提示；没有时应省略该字段。"
+        },
+        "text": {"type": "string", "minLength": 1, "maxLength": 2000}
+      }
+    }
+  }
+}

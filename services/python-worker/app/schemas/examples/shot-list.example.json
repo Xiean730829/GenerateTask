@@ -1,0 +1,117 @@
+{
+  "targetDurationSeconds": 60,
+  "durationToleranceRatio": 0.1,
+  "shots": [
+    {
+      "shotIndex": 1,
+      "sceneIndex": 1,
+      "durationSeconds": 18,
+      "environmentDescription": "空旷的写字楼电梯厅，冷白顶灯垂直照亮浅灰地砖；玻璃门外雨水横向滑落，电梯金属内壁反射手机冷光。",
+      "characterInstances": [
+        {
+          "characterName": "林夏",
+          "visualState": "二十九岁短发女性，浅灰衬衫与深色长裤，双臂抱着白色文件。",
+          "physicalAction": "右手拇指从开门键移向关门键并按下。",
+          "spatialAnchor": "画面右侧电梯轿厢内，前景；身体朝向门外。"
+        },
+        {
+          "characterName": "周野",
+          "visualState": "黄色防水外套被雨淋湿，左前臂有一道正在渗血的伤口。",
+          "physicalAction": "从走廊尽头跑向电梯，右手向即将关闭的门伸出。",
+          "spatialAnchor": "画面左后方走廊，逐渐接近电梯门。"
+        }
+      ],
+      "propInstances": [
+        {
+          "propName": "升职材料",
+          "visualState": "白色打印纸夹在透明文件夹内，纸角被手指压弯。",
+          "spatialAnchor": "被林夏左臂压在胸前。"
+        }
+      ],
+      "action": "林夏看一眼手机倒计时，把拇指移到关门键；周野伸手靠近时，电梯门开始合拢。",
+      "endState": "电梯门只剩一条竖直缝隙，周野的手停在门外，林夏仍站在门内。",
+      "dialogues": [
+        {
+          "speaker": "周野",
+          "performanceCue": "扶着墙，呼吸断续",
+          "text": "等一下……帮我叫救护车。"
+        }
+      ],
+      "cameraDescription": "从电梯内朝门外的固定中景开始，随后做一次缓慢推近，终点停在林夏按住关门键的手与门外伸来的手之间。",
+      "audioDescription": "低频空调声、雨水拍打玻璃、周野的脚步和喘息；不加入配乐。",
+      "continuityLocks": ["林夏始终穿浅灰衬衫", "周野黄色防水外套保持湿透", "电梯厅由冷白顶灯照明"]
+    },
+    {
+      "shotIndex": 2,
+      "sceneIndex": 2,
+      "durationSeconds": 22,
+      "environmentDescription": "停在楼层之间的电梯轿厢，主灯熄灭；顶部暖色应急灯和手机屏幕照亮金属门，狭窄门缝外没有可见人物。",
+      "characterInstances": [
+        {
+          "characterName": "林夏",
+          "visualState": "浅灰衬衫袖口干燥，文件散落在脚边，脸部由暖色应急灯从上方照亮。",
+          "physicalAction": "先蹲下捡文件，随后抬头贴近金属门，把双手插进门缝。",
+          "spatialAnchor": "轿厢中央前景，面对金属门。"
+        }
+      ],
+      "propInstances": [
+        {
+          "propName": "事故名单倒影",
+          "visualState": "只存在于金属门反射中的白纸，周野姓名被一根手指按住。",
+          "spatialAnchor": "金属门倒影中央，不进入现实轿厢。"
+        }
+      ],
+      "action": "金属门上的年长倒影按住事故名单中的姓名；林夏看向停止敲击的门缝，把手机塞进口袋并双手扒开门。",
+      "endState": "林夏双手卡在门缝中，门被推开到足以看见外侧地面的位置。",
+      "dialogues": [
+        {
+          "speaker": "林夏",
+          "performanceCue": "看着与倒影重合的手掌",
+          "text": "是因为我？"
+        }
+      ],
+      "cameraDescription": "固定中近景保持人物和金属门关系清楚，只在林夏开始扒开门时轻微下移跟随双手。",
+      "audioDescription": "电梯电流低鸣、门外雨声、一次逐渐停止的敲击；林夏说完后留出短暂静默。",
+      "continuityLocks": ["暖色应急灯是唯一顶部光源", "升职材料散落在林夏脚边", "未来名单只能出现在金属门倒影中"]
+    },
+    {
+      "shotIndex": 3,
+      "sceneIndex": 3,
+      "durationSeconds": 20,
+      "environmentDescription": "写字楼一楼电梯口，入口值班灯从左侧投出暖光；湿地面映出黄色外套和散落的白色文件，玻璃门外仍在下雨。",
+      "characterInstances": [
+        {
+          "characterName": "林夏",
+          "visualState": "浅灰衬衫袖口已经沾水，膝盖接触湿地面，手机夹在右肩与耳侧。",
+          "physicalAction": "双手持续用折起的材料压住周野左前臂。",
+          "spatialAnchor": "画面中央前景，跪在周野右侧。"
+        },
+        {
+          "characterName": "周野",
+          "visualState": "黄色防水外套湿透，左前臂被白色材料包住，脸色苍白但眼睛睁开。",
+          "physicalAction": "背靠电梯外墙坐着，右手护住餐盒。",
+          "spatialAnchor": "画面中央偏左，靠墙坐在中景。"
+        }
+      ],
+      "propInstances": [
+        {
+          "propName": "升职材料",
+          "visualState": "白色纸张被折叠后压在伤口上，边缘吸水变软。",
+          "spatialAnchor": "位于林夏双手与周野左前臂之间。"
+        }
+      ],
+      "action": "林夏持续按压伤口并向电话报告地址；手机屏幕亮起提交超时提示，她不松手。",
+      "endState": "林夏仍压住伤口，周野保持清醒；关闭中的金属门只映出两人当前的倒影。",
+      "dialogues": [
+        {
+          "speaker": "林夏",
+          "performanceCue": "看着伤口，声音稳定",
+          "text": "地址是中庭路八十八号，他意识清醒，左前臂出血。"
+        }
+      ],
+      "cameraDescription": "平视中景固定在两人身上，最后缓慢后拉，把散落文件和关闭中的电梯门纳入画面。",
+      "audioDescription": "电话接通提示音、入口雨声和衣料摩擦；手机超时提示只响一次，不加入配乐。",
+      "continuityLocks": ["周野左前臂持续受伤", "升职材料已被用来压住伤口", "一楼入口光线来自左侧暖色值班灯"]
+    }
+  ]
+}

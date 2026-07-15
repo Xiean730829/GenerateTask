@@ -1,0 +1,13 @@
+# docker profile：当 java-api 作为容器与 compose 栈在同一网络内运行时启用。
+# 使用 compose 服务名作为主机名（而非 localhost），凭据仍复用同一套默认值。
+# 启用方式：SPRING_PROFILES_ACTIVE=docker
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/auto_drama
+  data:
+    redis:
+      host: redis
+  rabbitmq:
+    host: rabbitmq
+# 注：对象存储改用云端阿里云 OSS（公网 endpoint），无需在 docker profile 覆盖；
+# 数据库若使用云端 RDS，请改用 local profile 而非本 profile。

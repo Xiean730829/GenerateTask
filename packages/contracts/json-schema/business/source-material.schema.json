@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/business/source-material.schema.json",
+  "title": "SourceMaterial 输入材料",
+  "description": "用户输入材料：一句话创意、大纲、剧本片段或上传文件。MS1 优先支持纯文本。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "projectId", "type", "status", "createdAt"],
+  "properties": {
+    "id": {
+      "description": "输入材料唯一标识",
+      "type": "string",
+      "format": "uuid"
+    },
+    "projectId": {
+      "description": "所属项目 ID",
+      "type": "string",
+      "format": "uuid"
+    },
+    "type": {
+      "description": "材料类型：text 文本，file 上传文件",
+      "type": "string",
+      "enum": ["text", "file"]
+    },
+    "text": {
+      "description": "文本内容。仅当 type 为 text 时存在。",
+      "type": ["string", "null"]
+    },
+    "title": {
+      "description": "材料标题或描述，可空",
+      "type": ["string", "null"]
+    },
+    "status": {
+      "description": "材料处理状态",
+      "type": "string"
+    },
+    "createdAt": {
+      "description": "创建时间",
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

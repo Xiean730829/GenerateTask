@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.auto-drama-studio.local/generation-spec/v1/text-content-result.schema.json",
+  "title": "TextContentResult",
+  "description": "故事扩写、剧本成稿和剧本改写共同使用的最小 LLM 长文本输出契约。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["content"],
+  "properties": {
+    "content": {
+      "type": "string",
+      "minLength": 1,
+      "description": "带有对应 Prompt 文本标记的完整长文本。具体标记和顺序由调用该契约的 Prompt 与后端 Parser 校验。"
+    }
+  }
+}

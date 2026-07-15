@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/generation-spec/task-updated-event.schema.json",
+  "title": "Episode task.updated WebSocket event",
+  "description": "Java publishes a full GenerationTask snapshot after every accepted task state or progress update. Clients reconcile with the episode task list after reconnecting.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "data"],
+  "properties": {
+    "type": { "const": "task.updated" },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["taskId", "episodeId", "taskType", "status", "progress", "result", "error", "updatedAt"],
+      "properties": {
+        "taskId": { "type": "string", "format": "uuid" },
+        "episodeId": { "type": "string", "format": "uuid" },
+        "taskType": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "queued", "running", "succeeded", "failed", "retrying", "canceled"] },
+        "progress": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "result": { "type": ["object", "null"], "additionalProperties": true },
+        "error": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["code", "message", "retryable"],
+          "properties": {
+            "code": { "type": "string" },
+            "message": { "type": "string" },
+            "retryable": { "type": "boolean" }
+          }
+        },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

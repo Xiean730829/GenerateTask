@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/business/script.schema.json",
+  "title": "Script 剧本",
+  "description": "单集剧本，是下游 Shot 生成的唯一叙事依据。由 Python 的 script.generate 任务产出后回写 Java。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "episodeId", "status", "version", "createdAt", "updatedAt"],
+  "properties": {
+    "id": {
+      "description": "剧本唯一标识",
+      "type": "string",
+      "format": "uuid"
+    },
+    "episodeId": {
+      "description": "所属分集 ID",
+      "type": "string",
+      "format": "uuid"
+    },
+    "title": {
+      "description": "剧本标题，可空",
+      "type": ["string", "null"]
+    },
+    "logline": {
+      "description": "一句话剧情梗概，可空",
+      "type": ["string", "null"]
+    },
+    "storyPromise": {
+      "description": "AI 内容层提取的故事承诺，可空",
+      "type": ["string", "null"]
+    },
+    "storySummary": {
+      "description": "完整但精炼的故事梗概，可空",
+      "type": ["string", "null"]
+    },
+    "finalOutcome": {
+      "description": "故事最终结果及主角外部处境变化，可空",
+      "type": ["string", "null"]
+    },
+    "content": {
+      "description": "剧本完整文本，可空",
+      "type": ["string", "null"]
+    },
+    "targetDurationSeconds": {
+      "description": "目标时长（秒），可空",
+      "type": ["integer", "null"],
+      "minimum": 1
+    },
+    "language": {
+      "description": "剧本语言标签，可空",
+      "type": ["string", "null"]
+    },
+    "genre": {
+      "description": "剧本题材，可空",
+      "type": ["string", "null"]
+    },
+    "style": {
+      "description": "剧本视觉/创作风格，可空",
+      "type": ["string", "null"]
+    },
+    "characters": {
+      "description": "从 Python 内容 Script 映射来的结构化人物信息，可空",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "scenes": {
+      "description": "可选的结构化场景拆分。MS1 阶段结构自由，暂不强约束字段。",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "version": {
+      "description": "剧本版本号，从 1 开始。修改剧本会产生新版本并使下游对象失效。",
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "description": "剧本状态：draft 草稿，confirmed 已确认（确认后方可进入镜头生成）",
+      "type": "string",
+      "enum": ["draft", "confirmed"]
+    },
+    "confirmedAt": {
+      "description": "确认时间，可空",
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "createdAt": {
+      "description": "创建时间",
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "description": "最后更新时间",
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

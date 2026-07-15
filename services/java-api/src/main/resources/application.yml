@@ -1,0 +1,77 @@
+# Java API 主配置。
+# 默认连接本地 docker-compose 暴露到 localhost 的基础设施端口（见 infra/compose/local/docker-compose.yaml）。
+# 所有连接项均可通过环境变量覆盖：本机开发用默认值，容器内运行用 docker profile（application-docker.yml）。
+spring:
+  application:
+    name: auto-drama-java-api
+
+  # PostgreSQL：数据库名/账号/端口遵循 Issue #10 开发规范
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:55432/auto_drama}
+    username: ${DB_USERNAME:auto_drama}
+    password: ${DB_PASSWORD:auto_drama_dev}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      # 表结构由 Flyway 管理，Hibernate 只做校验，绝不自动建表/改表
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  # Flyway：迁移脚本位于 classpath:db/migration，是数据库结构的唯一来源
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  # Redis
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  # RabbitMQ：账号与 compose 中 RABBITMQ_DEFAULT_USER/PASS 一致
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:auto_drama}
+    password: ${RABBITMQ_PASSWORD:auto_drama_dev}
+
+# Actuator：暴露健康检查，用于验证与容器栈（DB/Redis/RabbitMQ）的连通性
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      # 默认不向未认证调用方暴露依赖版本、连接与磁盘信息。
+      # 本地排障时可用 MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS=always 临时覆盖。
+      show-details: never
+  health:
+    db:
+      enabled: true
+    redis:
+      enabled: true
+    rabbit:
+      enabled: true
+
+app:
+  # 跨域：仅对外 /api 开放前端开发服务器来源；/internal 内部接口不开放跨域
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
+  # 云端对象存储（阿里云 OSS）连接参数。
+  # 凭据（access-key-id / access-key-secret）严禁写入本文件，仅通过环境变量或
+  # 本地 local profile（config/application-local.yml，已被 gitignore）注入；
+  # OSS 客户端由媒体后端（韩成成）实现，此处仅集中登记连接信息。
+  oss:
+    bucket-name: ${OSS_BUCKET_NAME:}
+    region: ${OSS_REGION:}
+    endpoint: ${OSS_ENDPOINT:}
+    access-key-id: ${OSS_ACCESS_KEY_ID:}
+    access-key-secret: ${OSS_ACCESS_KEY_SECRET:}

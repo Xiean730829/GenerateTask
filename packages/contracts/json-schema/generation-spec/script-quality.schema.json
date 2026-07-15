@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/generation-spec/v2/script-quality.schema.json",
+  "title": "ScriptQualityResult",
+  "$comment": "v2.0 以 Python Worker 严格 Schema 为准；- v1 的 score 可空和任意 problems 对象已删除。应用层仍需校验 passed=true 时 score>=80 且 problems 中不存在 blocking 或 major。",
+  "description": "v2.0：ScriptQualityChecker 的正式输出契约。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["passed", "score", "problems", "summary"],
+  "properties": {
+    "passed": {
+      "type": "boolean",
+      "description": "是否允许 Script 进入后续生产。"
+    },
+    "score": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "problems": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "$ref": "#/$defs/problem"
+      }
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "passed": {"const": true}
+        },
+        "required": ["passed"]
+      },
+      "then": {
+        "properties": {
+          "score": {"minimum": 80},
+          "problems": {
+            "not": {
+              "contains": {
+                "type": "object",
+                "required": ["severity"],
+                "properties": {
+                  "severity": {"enum": ["blocking", "major"]}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "problem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "severity", "evidence", "repairInstruction"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*$",
+          "maxLength": 80
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["blocking", "major", "minor"]
+        },
+        "evidence": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "repairInstruction": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        }
+      }
+    }
+  }
+}

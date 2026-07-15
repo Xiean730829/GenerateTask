@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/generation-spec/v2/script-generation-result.schema.json",
+  "title": "ScriptGenerationResult",
+  "description": "v2.0：script.generate 成功时回写 Java 的业务结果内容。任务标识、attempt 与 status 由外层 TaskResult 承载。",
+  "$comment": "v2.0 以 Python Worker 严格 Schema 为准；- v1 允许 storyBible、quality、promptVersions 缺失或为空。契约版本 v2.0 与结果载荷内部 schemaVersion=1.0 分开管理。result.script 是完整 Python 内容 Script，不包含 Java 业务 ID、版本、状态或时间戳。应用层必须校验 script 与 storyBible.metadata 的一致性。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "script", "storyBible", "quality", "rewriteCount", "promptVersions"],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "script": {
+      "$ref": "generated-script.schema.json"
+    },
+    "storyBible": {
+      "$ref": "story-bible.schema.json"
+    },
+    "quality": {
+      "allOf": [
+        {"$ref": "script-quality.schema.json"},
+        {
+          "type": "object",
+          "required": ["passed"],
+          "properties": {
+            "passed": {"const": true}
+          }
+        }
+      ]
+    },
+    "rewriteCount": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "promptVersions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scriptExpander",
+        "scriptGenerator",
+        "scriptQualityChecker",
+        "scriptRewriter",
+        "storyBibleExtractor"
+      ],
+      "properties": {
+        "scriptExpander": {"type": "string", "pattern": "^v[1-9][0-9]*$"},
+        "scriptGenerator": {"type": "string", "pattern": "^v[1-9][0-9]*$"},
+        "scriptQualityChecker": {"type": "string", "pattern": "^v[1-9][0-9]*$"},
+        "scriptRewriter": {"type": "string", "pattern": "^v[1-9][0-9]*$"},
+        "storyBibleExtractor": {"type": "string", "pattern": "^v[1-9][0-9]*$"}
+      }
+    }
+  }
+}

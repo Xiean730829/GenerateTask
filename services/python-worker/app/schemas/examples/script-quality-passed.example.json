@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "score": 88,
+  "problems": [
+    {
+      "code": "SECONDARY_DIALOGUE_SLIGHTLY_LONG",
+      "severity": "minor",
+      "evidence": "急救电话中的地址和伤情说明略长，但仍可在目标时长内完成。",
+      "repairInstruction": "后续配音阶段可在不损失关键信息的前提下压缩停顿。"
+    }
+  ],
+  "summary": "冲突、转折、结局和可视化动作完整，可以进入后续生产。"
+}

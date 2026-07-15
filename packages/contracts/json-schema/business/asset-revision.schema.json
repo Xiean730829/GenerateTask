@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.auto-drama-studio.local/business/asset-revision.schema.json",
+  "title": "AssetRevision 共享资产版本",
+  "description": "共享 Asset 的不可变版本。创建版本不自动影响镜头，必须经显式 apply 后才让目标镜头下游内容失效。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "assetId", "revisionNo", "attributes", "createdAt"],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "assetId": { "type": "string", "format": "uuid" },
+    "revisionNo": { "type": "integer", "minimum": 1 },
+    "attributes": { "type": "object", "additionalProperties": true },
+    "createdAt": { "type": "string", "format": "date-time" }
+  }
+}
