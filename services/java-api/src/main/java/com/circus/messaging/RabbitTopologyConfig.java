@@ -6,7 +6,7 @@ import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -52,23 +52,16 @@ public class RabbitTopologyConfig {
         return new Jackson2JsonMessageConverter();
     }
 
-    /** @Bean：没有真实任务状态回填实现时才启用的安全兜底 Bean。 */
+    /** @Bean：把 broker 的 ack/nack/return 统一转换为 PublishOutcomeListener 回调。 */
     @Bean
-    // @ConditionalOnMissingBean：齐广志实现真实监听器后，该空实现会自动让位。
-    @ConditionalOnMissingBean
-    PublishOutcomeListener noOpPublishOutcomeListener() {
-        return new PublishOutcomeListener() {
+    PublishConfirmHandler publishConfirmHandler(ObjectProvider<PublishOutcomeListener> listenerProvider) {
+        PublishOutcomeListener outcomeListener = listenerProvider.getIfAvailable(() -> new PublishOutcomeListener() {
             @Override
             public void onPublished(TaskPublication publication) {}
 
             @Override
             public void onPublishFailed(TaskPublication publication, String errorCode, String reason) {}
-        };
-    }
-
-    /** @Bean：把 broker 的 ack/nack/return 统一转换为 PublishOutcomeListener 回调。 */
-    @Bean
-    PublishConfirmHandler publishConfirmHandler(PublishOutcomeListener outcomeListener) {
+        });
         return new PublishConfirmHandler(outcomeListener);
     }
 }

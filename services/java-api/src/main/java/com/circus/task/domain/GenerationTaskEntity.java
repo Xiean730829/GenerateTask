@@ -119,6 +119,15 @@ public class GenerationTaskEntity {
 
     public Instant updatedAt() { return updatedAt; }
 
+    public void markQueued(Instant now) {
+        status = "queued";
+        queuedAt = now;
+        retryable = null;
+        errorCode = null;
+        errorMessage = null;
+        updatedAt = now;
+    }
+
     public void markFailed(boolean canRetry, String code, String message, Instant now) {
         status = "failed";
         progress = 100;
@@ -126,6 +135,17 @@ public class GenerationTaskEntity {
         errorCode = code;
         errorMessage = message;
         finishedAt = now;
+        updatedAt = now;
+    }
+
+    public void markPublishFailed(String code, String message, Instant now) {
+        if ("retrying".equals(status)) {
+            markFailed(true, code, message, now);
+            return;
+        }
+        retryable = true;
+        errorCode = code;
+        errorMessage = message;
         updatedAt = now;
     }
 

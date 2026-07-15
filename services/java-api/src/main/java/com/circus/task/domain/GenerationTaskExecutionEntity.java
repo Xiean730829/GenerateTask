@@ -103,5 +103,21 @@ public class GenerationTaskExecutionEntity {
 
     public Instant createdAt() { return createdAt; }
 
+    public Instant publishedAt() { return publishedAt; }
+
     public Instant updatedAt() { return updatedAt; }
+
+    public void markPublished(Instant now) {
+        status = "queued";
+        publishedAt = now;
+        updatedAt = now;
+    }
+
+    public void markFailed(String code, String message, Instant now) {
+        status = "failed";
+        errorCode = code;
+        errorMessage = message;
+        finishedAt = now;
+        updatedAt = now;
+    }
 }
