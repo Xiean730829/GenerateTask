@@ -38,7 +38,8 @@ public class TaskCommandService implements TaskCommandInterface {
     // @Transactional：重试 attempt 的创建与状态变化必须同一事务提交。
     @Transactional
     public void retry(UUID taskId) {
-        taskStateStore.retry(taskId);
+        TaskDispatch dispatch = taskStateStore.retry(taskId);
+        eventPublisher.publishEvent(new TaskDispatchRequestedEvent(this, dispatch));
     }
 
     /** @Override：取消规则同样留给真实状态机，避免命令层感知持久化细节。 */

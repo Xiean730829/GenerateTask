@@ -30,7 +30,9 @@ class InMemoryTaskStateStore implements TaskStateStore {
     }
 
     @Override
-    public void retry(UUID taskId) {}
+    public TaskDispatch retry(UUID taskId) {
+        throw new UnsupportedOperationException("InMemoryTaskStateStore does not execute retries");
+    }
 
     @Override
     public void cancel(UUID taskId) {}

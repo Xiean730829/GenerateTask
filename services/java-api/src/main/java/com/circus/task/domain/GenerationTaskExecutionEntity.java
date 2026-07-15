@@ -69,4 +69,39 @@ public class GenerationTaskExecutionEntity {
     private Instant updatedAt;
 
     protected GenerationTaskExecutionEntity() {}
+
+    public static GenerationTaskExecutionEntity queued(
+            UUID messageId,
+            UUID taskId,
+            int attempt,
+            String traceId,
+            JsonNode payloadSnapshot,
+            Instant now) {
+        GenerationTaskExecutionEntity execution = new GenerationTaskExecutionEntity();
+        execution.messageId = messageId;
+        execution.taskId = taskId;
+        execution.attempt = attempt;
+        execution.traceId = traceId;
+        execution.payloadSnapshot = payloadSnapshot;
+        execution.status = "queued";
+        execution.createdAt = now;
+        execution.updatedAt = now;
+        return execution;
+    }
+
+    public UUID messageId() { return messageId; }
+
+    public UUID taskId() { return taskId; }
+
+    public Integer attempt() { return attempt; }
+
+    public String traceId() { return traceId; }
+
+    public JsonNode payloadSnapshot() { return payloadSnapshot; }
+
+    public String status() { return status; }
+
+    public Instant createdAt() { return createdAt; }
+
+    public Instant updatedAt() { return updatedAt; }
 }

@@ -41,5 +41,114 @@ public class GenerationTaskEntity {
     @Column(name = "started_at") private Instant startedAt;
     @Column(name = "finished_at") private Instant finishedAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;
+
     protected GenerationTaskEntity() {}
+
+    public static GenerationTaskEntity pending(
+            UUID id,
+            UUID projectId,
+            UUID episodeId,
+            UUID shotId,
+            UUID panelId,
+            UUID ownerUserId,
+            String taskType,
+            String idempotencyKey,
+            String idempotencyOperation,
+            String requestFingerprint,
+            String traceId,
+            Instant now,
+            int maxRetries) {
+        GenerationTaskEntity task = new GenerationTaskEntity();
+        task.id = id;
+        task.projectId = projectId;
+        task.episodeId = episodeId;
+        task.shotId = shotId;
+        task.panelId = panelId;
+        task.ownerUserId = ownerUserId;
+        task.taskType = taskType;
+        task.status = "pending";
+        task.attempt = 0;
+        task.progress = 0;
+        task.retryCount = 0;
+        task.maxRetries = maxRetries;
+        task.retryable = null;
+        task.idempotencyKey = idempotencyKey;
+        task.idempotencyOperation = idempotencyOperation;
+        task.requestFingerprint = requestFingerprint;
+        task.traceId = traceId;
+        task.createdAt = now;
+        task.updatedAt = now;
+        return task;
+    }
+
+    public UUID id() { return id; }
+
+    public UUID projectId() { return projectId; }
+
+    public UUID episodeId() { return episodeId; }
+
+    public UUID shotId() { return shotId; }
+
+    public UUID panelId() { return panelId; }
+
+    public UUID ownerUserId() { return ownerUserId; }
+
+    public String taskType() { return taskType; }
+
+    public String status() { return status; }
+
+    public Integer attempt() { return attempt; }
+
+    public Integer progress() { return progress; }
+
+    public Integer retryCount() { return retryCount; }
+
+    public Integer maxRetries() { return maxRetries; }
+
+    public Boolean retryable() { return retryable; }
+
+    public String idempotencyKey() { return idempotencyKey; }
+
+    public String idempotencyOperation() { return idempotencyOperation; }
+
+    public String requestFingerprint() { return requestFingerprint; }
+
+    public String traceId() { return traceId; }
+
+    public Instant createdAt() { return createdAt; }
+
+    public Instant updatedAt() { return updatedAt; }
+
+    public void markFailed(boolean canRetry, String code, String message, Instant now) {
+        status = "failed";
+        progress = 100;
+        retryable = canRetry;
+        errorCode = code;
+        errorMessage = message;
+        finishedAt = now;
+        updatedAt = now;
+    }
+
+    public void beginRetry(String nextTraceId, Instant now) {
+        status = "retrying";
+        retryCount = retryCount + 1;
+        attempt = attempt + 1;
+        progress = 0;
+        retryable = null;
+        errorCode = null;
+        errorMessage = null;
+        resultRef = null;
+        resultJson = null;
+        queuedAt = null;
+        startedAt = null;
+        finishedAt = null;
+        traceId = nextTraceId;
+        updatedAt = now;
+    }
+
+    public void cancel(Instant now) {
+        status = "canceled";
+        finishedAt = now;
+        updatedAt = now;
+    }
 }

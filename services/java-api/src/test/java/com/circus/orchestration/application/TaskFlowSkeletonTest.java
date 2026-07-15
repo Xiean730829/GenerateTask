@@ -133,7 +133,9 @@ class TaskFlowSkeletonTest {
         }
 
         @Override
-        public void retry(UUID taskId) {}
+        public TaskDispatch retry(UUID taskId) {
+            throw new UnsupportedOperationException("retry is not part of the skeleton test");
+        }
 
         @Override
         public void cancel(UUID taskId) {}

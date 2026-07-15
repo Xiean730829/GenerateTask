@@ -15,7 +15,7 @@ public interface TaskStateStore {
 
     TaskDispatch createPending(CreateTaskCommand command);
 
-    void retry(UUID taskId);
+    TaskDispatch retry(UUID taskId);
 
     void cancel(UUID taskId);
 }
