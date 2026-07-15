@@ -5,6 +5,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import com.circus.task.api.dto.CreateTaskCommand;
 import com.circus.task.domain.GenerationTaskEntity;
 import com.circus.task.domain.GenerationTaskExecutionEntity;
@@ -100,6 +102,24 @@ class JpaTaskStateStoreTest {
         assertThat(task.idempotencyKey()).isNull();
         assertThat(task.idempotencyOperation()).isNull();
         assertThat(task.requestFingerprint()).isNull();
+    }
+
+    @Test
+    void rejectsCreateWithoutEpisodeIdBeforeWritingEitherRow() {
+        CreateTaskCommand command = new CreateTaskCommand(
+                "script.generate",
+                UUID.randomUUID(),
+                null,
+                null,
+                null,
+                JsonNodeFactory.instance.objectNode().put("sourceText", "idea"),
+                null);
+
+        assertThatThrownBy(() -> store.createPending(command))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("episodeId");
+
+        org.mockito.Mockito.verifyNoInteractions(taskRepository, executionRepository);
     }
 
     @Test

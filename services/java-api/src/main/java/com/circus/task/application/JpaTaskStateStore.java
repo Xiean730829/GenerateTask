@@ -82,6 +82,7 @@ public class JpaTaskStateStore implements TaskStateStore {
     @Override
     @Transactional
     public TaskDispatch createPending(CreateTaskCommand command) {
+        validateCreateCommand(command);
         Instant now = clock.instant();
         UUID taskId = UUID.randomUUID();
         UUID messageId = UUID.randomUUID();
@@ -181,6 +182,24 @@ public class JpaTaskStateStore implements TaskStateStore {
 
     private String normalize(String value) {
         return value == null || value.isBlank() ? null : value;
+    }
+
+    private void validateCreateCommand(CreateTaskCommand command) {
+        if (command == null) {
+            throw new IllegalArgumentException("create task command is required");
+        }
+        if (command.taskType() == null || command.taskType().isBlank()) {
+            throw new IllegalArgumentException("taskType is required");
+        }
+        if (command.projectId() == null) {
+            throw new IllegalArgumentException("projectId is required");
+        }
+        if (command.episodeId() == null) {
+            throw new IllegalArgumentException("episodeId is required");
+        }
+        if (command.payload() == null) {
+            throw new IllegalArgumentException("payload is required");
+        }
     }
 
     private GenerationTaskStatus statusOf(String wireValue) {
