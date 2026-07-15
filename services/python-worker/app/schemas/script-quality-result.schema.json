@@ -1,9 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://contracts.auto-drama-studio.local/generation-spec/v2/script-quality.schema.json",
+  "$id": "https://schemas.auto-drama-studio.local/generation-spec/v1/script-quality-result.schema.json",
   "title": "ScriptQualityResult",
-  "$comment": "v2.0 以 Python Worker 严格 Schema 为准；- v1 的 score 可空和任意 problems 对象已删除。应用层仍需校验 passed=true 时 score>=80 且 problems 中不存在 blocking 或 major。",
-  "description": "v2.0：ScriptQualityChecker 的正式输出契约。",
+  "$comment": "应用层必须额外校验：passed=true 时 score>=80 且 problems 中不存在 blocking 或 major；JSON Schema 不负责数组内容之间的条件关系。",
+  "description": "ScriptQualityChecker 的正式输出契约。",
   "type": "object",
   "additionalProperties": false,
   "required": ["passed", "score", "problems", "summary"],

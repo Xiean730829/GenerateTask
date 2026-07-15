@@ -1,0 +1,100 @@
+{
+  "title": "最后一班电梯",
+  "logline": "一名加班职员在午夜电梯里看见未来的自己，并在升职与救人之间作出选择。",
+  "storyPromise": "让观众跟随一个人在截止时间与陌生人的生死之间作出无法撤回的选择，并看见选择的具体代价。",
+  "storySummary": "林夏为了赶在午夜前提交升职材料，试图关上电梯门避开受伤的外卖员。电梯故障后，她从门上的倒影看见这个选择留下的未来后果，最终放弃倒计时，扒开电梯门救人。",
+  "finalOutcome": "林夏错过升职材料提交时间，却救下周野并主动承担延误造成的职业后果。",
+  "targetDurationSeconds": 60,
+  "language": "zh-CN",
+  "genre": "都市悬疑",
+  "style": "写实都市夜景；冷白办公灯、金属表面和暖色应急灯构成主要视觉对照",
+  "characters": [
+    {
+      "name": "林夏",
+      "narrativeRole": "主角",
+      "description": "二十九岁，短发，浅灰衬衫与深色长裤；动作利落但常回避目光，压力增大时会把文件边缘压得发白。",
+      "relationships": ["与周野原本互不相识，因电梯里的救援建立短暂联系"]
+    },
+    {
+      "name": "周野",
+      "narrativeRole": "触发主角选择的受伤外卖员",
+      "description": "二十多岁，黄色防水外套，左前臂被划伤；疼痛时仍先护住怀里的餐盒。",
+      "relationships": ["被林夏救下"]
+    }
+  ],
+  "scenes": [
+    {
+      "sceneIndex": 1,
+      "slugline": "INT｜写字楼电梯厅｜午夜前",
+      "purpose": "建立林夏的目标，并让救人请求与升职倒计时正面冲突",
+      "dramaticChange": "林夏从只顾提交材料变为亲手阻止电梯门关闭",
+      "environment": "冷白顶灯照着空旷电梯厅，玻璃门外雨水横扫，电梯内金属墙反射手机冷光。",
+      "characterState": "林夏抱紧文件站在电梯内；周野从远处跑来，黄色外套滴水，左前臂正在流血。",
+      "elements": [
+        {
+          "type": "action",
+          "content": "林夏反复看手机上的提交倒计时。周野伸手挡门，她的拇指停在开门键上方，却按下关门键。"
+        },
+        {
+          "type": "dialogue",
+          "speaker": "周野",
+          "performanceCue": "扶着墙，呼吸断续",
+          "text": "等一下……帮我叫救护车。"
+        },
+        {
+          "type": "action",
+          "content": "电梯门合到只剩一条缝时突然停住，应急灯从轿厢顶部亮起。"
+        }
+      ]
+    },
+    {
+      "sceneIndex": 2,
+      "slugline": "INT｜停在楼层之间的电梯｜午夜",
+      "purpose": "让林夏看见逃避选择会留下的具体后果",
+      "dramaticChange": "她从维护自身利益转为接受救人的代价",
+      "environment": "电梯主灯熄灭，只有暖色应急灯和手机屏幕照亮金属门，门缝外传来雨声与微弱敲击。",
+      "characterState": "林夏蹲下捡文件，手指压住折痕；门上的倒影比她年长，胸前挂着管理层工牌。",
+      "elements": [
+        {
+          "type": "action",
+          "content": "未来倒影用纸巾反复擦拭事故名单，手指停在周野的姓名上。现实中的林夏贴近金属门。"
+        },
+        {
+          "type": "dialogue",
+          "speaker": "林夏",
+          "performanceCue": "看着自己的手掌",
+          "text": "是因为我？"
+        },
+        {
+          "type": "action",
+          "content": "门外敲击停止。林夏把手机塞进口袋，双手插进电梯门缝。"
+        }
+      ]
+    },
+    {
+      "sceneIndex": 3,
+      "slugline": "INT｜写字楼一楼电梯口｜午夜后",
+      "purpose": "完成救人动作并交代选择的现实代价",
+      "dramaticChange": "林夏失去升职提交机会，但救下周野并主动承担后果",
+      "environment": "一楼入口的暖色值班灯照进轿厢，湿地面映出黄色外套和散落的白色文件。",
+      "characterState": "林夏跪在地面，衬衫袖口沾水；周野靠墙坐着，左臂压在她折起的材料上。",
+      "elements": [
+        {
+          "type": "action",
+          "content": "林夏把周野拉进电梯，用升职材料背面压住伤口，到达一楼后拨通急救电话。"
+        },
+        {
+          "type": "dialogue",
+          "speaker": "林夏",
+          "performanceCue": "保持按压，声音稳定",
+          "text": "地址是中庭路八十八号，他意识清醒，左前臂出血。"
+        },
+        {
+          "type": "action",
+          "content": "手机显示提交已超时。林夏没有松手，金属门上只剩她和周野此刻的倒影。"
+        }
+      ]
+    }
+  ],
+  "scriptText": "[TITLE]\n最后一班电梯\n\n[LOGLINE]\n一名加班职员在午夜电梯里看见未来的自己，并在升职与救人之间作出选择。\n\n[STORY_SUMMARY]\n林夏为了赶在午夜前提交升职材料，试图关上电梯门避开受伤的外卖员。电梯故障后，她从门上的倒影看见这个选择留下的未来后果，最终放弃倒计时，扒开电梯门救人。\n\n[CHARACTERS]\n- 林夏｜主角｜二十九岁，短发，浅灰衬衫与深色长裤｜压力增大时会把文件边缘压得发白｜与周野原本互不相识\n- 周野｜受伤的外卖员｜二十多岁，黄色防水外套，左前臂被划伤｜疼痛时仍先护住怀里的餐盒｜被林夏救下\n\n[SCRIPT]\n\n[SCENE 1]\nSLUGLINE: INT｜写字楼电梯厅｜午夜前\nSCENE_PURPOSE: 建立目标与冲突\nDRAMATIC_CHANGE: 林夏阻止电梯门关闭\nENVIRONMENT: 冷白顶灯照着空旷电梯厅，玻璃门外正在下雨\nCHARACTER_STATE: 林夏抱紧文件；周野左前臂流血\n\n[ACTION]\n林夏按下关门键，电梯门在周野面前合拢。\n\n[DIALOGUE]\n周野（扶墙喘息）: 等一下。\n\n[END_SCENE]\n\n[SCENE 2]\nSLUGLINE: INT｜停在楼层之间的电梯｜午夜\nSCENE_PURPOSE: 展示选择的后果\nDRAMATIC_CHANGE: 林夏接受救人的代价\nENVIRONMENT: 暖色应急灯照亮金属门\nCHARACTER_STATE: 林夏面对未来倒影\n\n[ACTION]\n倒影指向事故名单上的姓名，林夏把双手插进门缝。\n\n[END_SCENE]\n\n[SCENE 3]\nSLUGLINE: INT｜写字楼一楼电梯口｜午夜后\nSCENE_PURPOSE: 完成救援\nDRAMATIC_CHANGE: 林夏失去提交机会但救下周野\nENVIRONMENT: 暖色值班灯照进轿厢\nCHARACTER_STATE: 林夏跪地按住周野伤口\n\n[ACTION]\n林夏用材料压住伤口并拨通急救电话。\n\n[END_SCENE]\n\n[END_SCRIPT]"
+}

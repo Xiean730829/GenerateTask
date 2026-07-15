@@ -1,9 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://contracts.auto-drama-studio.local/generation-spec/v2/story-bible.schema.json",
+  "$id": "https://schemas.auto-drama-studio.local/generation-spec/v1/story-bible.schema.json",
   "title": "StoryBible",
-  "description": "v2.0：最终 Script 通过质量检查后提取的静态故事圣经。只保存 metadata 与 worldSettings。",
-  "$comment": "v2.0 以 Python Worker 严格 Schema 为准；- v1 的可空元信息和世界设定字段已收紧。StoryBible 仍只保存跨场景稳定事实；人物当前状态、道具位置、天气变化、Scene 与 Shot 均属于动态实例。",
+  "description": "最终 Script 通过质量检查后提取的静态故事圣经。只保存 metadata 与 worldSettings。",
+  "$comment": "StoryBible 只保存跨场景稳定事实；人物当前状态、道具位置、天气变化、Scene 与 Shot 均属于动态实例，不得写入本对象。",
   "type": "object",
   "additionalProperties": false,
   "required": ["metadata", "worldSettings"],

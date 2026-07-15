@@ -1,9 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://contracts.auto-drama-studio.local/generation-spec/v2/generated-script.schema.json",
-  "title": "GeneratedScript 剧本生成产物",
-  "description": "v2.0：Python Worker 输出的严格剧本内容对象。业务 ID、版本、状态和时间字段由 Java 管理，不属于本内容契约。",
-  "$comment": "v2.0 以 services/python-worker/app/schemas/script.schema.json 为准；- v1 允许 storyPromise、targetDurationSeconds、language、genre、style 为空，现已收紧为必填。",
+  "$id": "https://schemas.auto-drama-studio.local/generation-spec/v1/script.schema.json",
+  "title": "Script",
+  "description": "后端从 ScriptDraft 长文本协议解析得到的正式剧本内容对象。业务 ID 与任务状态由 Java 管理，不属于本内容契约。",
   "type": "object",
   "additionalProperties": false,
   "required": [
